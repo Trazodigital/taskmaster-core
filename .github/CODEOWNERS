@@ -1,0 +1,3 @@
+# Review ownership. Required by code-review-gate --architecture-only, which
+# resolves the approvers for the architecture layer from this file.
+docs/architecture/ @MFei8ht

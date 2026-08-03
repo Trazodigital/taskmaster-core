@@ -15,8 +15,8 @@
 # ─── 1. Tool identity ─────────────────────────────────────────────────────────
 
 tool:
-  name: <PLACEHOLDER>              # e.g. strictdoc, doors-next, jira-req
-  interaction_mode: <PLACEHOLDER>  # local-files | cli | rest-api | webhook
+  name: "strictdoc"              # e.g. strictdoc, doors-next, jira-req
+  interaction_mode: "local-files"  # local-files | cli | rest-api | webhook
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
 #
@@ -25,34 +25,34 @@ tool:
 # auth resolution in that case.
 
 auth:
-  mode: <PLACEHOLDER>              # none | token | oauth | basic
-  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+  mode: "none"              # none | token | oauth | basic
+  credential_key: "none"    # path in the secrets vault (see secrets-vault.yaml)
 
 # ─── 3. Storage layout ────────────────────────────────────────────────────────
 
 storage:
   requirements_dir: docs/requirements     # framework-fixed
-  file_extension: <PLACEHOLDER>           # e.g. sdoc, md, yaml
-  one_file_per: <PLACEHOLDER>             # feature | requirement | project
+  file_extension: "md"           # e.g. sdoc, md, yaml
+  one_file_per: "requirement"             # feature | requirement | project
   glossary_file: docs/glossary.md         # framework-fixed
 
 # ─── 4. UID convention ────────────────────────────────────────────────────────
 
 uid:
-  pattern: "REQ-[A-Z]+-[0-9]+"            # framework-fixed; inherited from tech-stack.yaml
+  pattern: "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"  # framework-fixed; inherited from tech-stack.yaml
   types:                                  # extendable per project
     - ARCH
     - FUNC
     - NFR-PERF
     - NFR-SEC
     - NFR-USE
-  uniqueness_check: <PLACEHOLDER>         # command that exits 0 if all UIDs are unique
+  uniqueness_check: "scripts/check-traceability.sh"         # command that exits 0 if all UIDs are unique
 
 # ─── 5. Traceability markers ──────────────────────────────────────────────────
 
 markers:
   syntax: "@sdoc[<UID>]"                  # framework-fixed
-  comment_style: <PLACEHOLDER>            # jsdoc | python-docstring | godoc | rustdoc
+  comment_style: "python-docstring"            # jsdoc | python-docstring | godoc | rustdoc
   scan_paths:                             # framework-fixed
     - src
     - tests
@@ -69,9 +69,9 @@ markers:
 # Values under scripts/ are framework-fixed and MUST NOT be changed.
 
 commands:
-  validate_corpus: <PLACEHOLDER>          # e.g. "strictdoc passthrough docs/requirements/"
-  export_matrix: <PLACEHOLDER>            # e.g. "strictdoc export --format=html docs/requirements/"
-  check_uniqueness: <PLACEHOLDER>         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
+  validate_corpus: "scripts/check-traceability.sh"          # e.g. "strictdoc passthrough docs/requirements/"
+  export_matrix: "scripts/check-traceability.sh --report"            # e.g. "strictdoc export --format=html docs/requirements/"
+  check_uniqueness: "scripts/check-traceability.sh"         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
   check_glossary: scripts/check-glossary.sh
   check_nfr_fields: scripts/check-nfr-fields.sh
   check_traceability: scripts/check-traceability.sh
@@ -80,9 +80,9 @@ commands:
 
 nfr_fields:
   required_for_types:
-    - NFR-PERF
-    - NFR-SEC
-    - NFR-USE
+    - REQ-NFR-PERF
+    - REQ-NFR-SEC
+    - REQ-NFR-USE
   fields:
     - METRIC
     - THRESHOLD

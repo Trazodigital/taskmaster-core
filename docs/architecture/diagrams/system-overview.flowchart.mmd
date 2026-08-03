@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph external["External actors"]
+        User["User"]
+    end
+
+    subgraph system["TaskMaster Core"]
+        CLI["cli"]
+        Scheduler["scheduler"]
+        TasksService["tasks"]
+        SpacesService["spaces"]
+        NotificationsService["notifications"]
+        StorageService["storage"]
+    end
+
+    User -->|"issues command"| CLI
+    CLI -->|"create task"| TasksService
+    CLI -->|"list tasks"| TasksService
+    CLI -->|"assign task to space"| SpacesService
+    TasksService -->|"persist task"| StorageService
+    TasksService -->|"load tasks"| StorageService
+    SpacesService -->|"persist space"| StorageService
+    SpacesService -->|"load spaces"| StorageService
+    Scheduler -->|"due-date check tick"| TasksService
+    TasksService -->|"task due-date reached"| NotificationsService
+    NotificationsService -->|"deliver reminder"| User

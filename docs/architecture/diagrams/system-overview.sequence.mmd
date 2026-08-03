@@ -1,0 +1,64 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant CLI
+    participant Scheduler
+    participant TasksService
+    participant SpacesService
+    participant NotificationsService
+    participant StorageService
+
+    Note over User,StorageService: Flow 1 - create task
+    User->>CLI: issues command (create task)
+    CLI->>TasksService: create task
+    TasksService->>StorageService: persist task
+    alt persisted
+        StorageService-->>TasksService: persisted task id
+        TasksService-->>CLI: created task
+        CLI-->>User: confirmation
+    else storage unavailable
+        StorageService-->>TasksService: storage error
+        TasksService-->>CLI: creation failed
+        CLI-->>User: error message
+    end
+    Note over TasksService,StorageService: write timeout 5s, no retry
+
+    Note over User,StorageService: Flow 2 - list tasks
+    User->>CLI: issues command (list tasks)
+    CLI->>TasksService: list tasks
+    TasksService->>StorageService: load tasks
+    StorageService-->>TasksService: stored tasks
+    alt tasks found
+        TasksService-->>CLI: task list
+        CLI-->>User: rendered task list
+    else no tasks stored
+        TasksService-->>CLI: empty task list
+        CLI-->>User: empty-state message
+    end
+
+    Note over User,StorageService: Flow 3 - assign task to space
+    User->>CLI: issues command (assign task to space)
+    CLI->>SpacesService: assign task to space
+    SpacesService->>StorageService: load spaces
+    StorageService-->>SpacesService: stored spaces
+    alt space exists
+        SpacesService->>StorageService: persist space
+        StorageService-->>SpacesService: persisted space id
+        SpacesService-->>CLI: updated space
+        CLI-->>User: confirmation
+    else space not found
+        SpacesService-->>CLI: unknown space
+        CLI-->>User: error message
+    end
+
+    Note over Scheduler,User: Flow 4 - due-date reminder
+    Scheduler->>TasksService: due-date check tick
+    TasksService->>StorageService: load tasks
+    StorageService-->>TasksService: stored tasks
+    loop for each overdue task
+        TasksService->>NotificationsService: task due-date reached
+        Note right of NotificationsService: fire-and-forget, no ack expected
+        NotificationsService->>User: deliver reminder
+        Note right of User: fire-and-forget, delivery not confirmed
+    end
+    TasksService-->>Scheduler: check completed

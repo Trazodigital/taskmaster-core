@@ -47,3 +47,34 @@ Rules the parser enforces:
   Entries below this line are appended by the `domain-glossary` skill during
   Phase 1 (`sdd-spec`). This section is empty in the framework template.
 -->
+
+## Task
+
+**Definition:** A unit of work tracked by TaskMaster Core, optionally carrying a Due Date and optionally assigned to a Space.
+**Examples:** "Write the architecture doc", "Renew the domain"
+
+## Space
+
+**Definition:** A named container that groups related Tasks so they can be organized and retrieved together.
+**Examples:** "Work", "Home", "Q3 launch"
+
+## Due Date
+
+**Definition:** The instant at which a Task becomes due, used by `tasks` to decide whether the Task is an Overdue Task.
+
+## Overdue Task
+
+**Definition:** A Task whose Due Date lies in the past at the moment a due-date check runs.
+
+## Reminder
+
+**Definition:** A single message delivered to the User announcing one Overdue Task.
+
+## Command
+
+**Definition:** A single instruction issued by the User through `cli`, such as creating a Task, listing Tasks, or assigning a Task to a Space.
+**Examples:** create task, list tasks, assign task to space
+
+## Task List
+
+**Definition:** The ordered collection of Tasks returned by a task-listing Command, possibly empty.

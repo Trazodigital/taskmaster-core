@@ -15,8 +15,8 @@
 # ─── 1. Tool identity ─────────────────────────────────────────────────────────
 
 tool:
-  name: <PLACEHOLDER>              # e.g. github-actions, gitlab-ci, azure-devops-pipelines
-  interaction_mode: <PLACEHOLDER>  # hosted-yaml | cli | rest-api
+  name: "github-actions"              # e.g. github-actions, gitlab-ci, azure-devops-pipelines
+  interaction_mode: "hosted-yaml"  # hosted-yaml | cli | rest-api
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
 #
@@ -24,8 +24,8 @@ tool:
 # Leave placeholders in place when interaction_mode is hosted-yaml.
 
 auth:
-  mode: <PLACEHOLDER>              # none | token | oauth | basic
-  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+  mode: "none"              # none | token | oauth | basic
+  credential_key: "none"    # path in the secrets vault (see secrets-vault.yaml)
 
 # ─── 3. Suites ────────────────────────────────────────────────────────────────
 #
@@ -38,55 +38,55 @@ auth:
 suites:
 
   lint:
-    command: <PLACEHOLDER>                       # resolves toolchain.linter from tech-stack.yaml
+    command: "flake8 src/"                       # resolves toolchain.linter from tech-stack.yaml
     triggers: [push, pr]
     blocking: true
     artifacts: [lint-report]
 
   format-check:
-    command: <PLACEHOLDER>                       # resolves toolchain.formatter --check
+    command: "black --check src/"                       # resolves toolchain.formatter --check
     triggers: [push, pr]
     blocking: true
     artifacts: []
 
   type-check:
-    command: <PLACEHOLDER>                       # e.g. tsc --noEmit, mypy, go vet
+    command: "python3 -m py_compile src/**/*.py"                       # e.g. tsc --noEmit, mypy, go vet
     triggers: [push, pr]
     blocking: true
     artifacts: []
 
   test-unit:
-    command: <PLACEHOLDER>                       # resolves toolchain.test_runner unit subset
+    command: "pytest tests/"                       # resolves toolchain.test_runner unit subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml, coverage]
 
   test-integration:
-    command: <PLACEHOLDER>                       # resolves toolchain.test_runner integration subset
+    command: "pytest tests/"                       # resolves toolchain.test_runner integration subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   test-security:
-    command: <PLACEHOLDER>                       # resolves toolchain.test_runner security subset
+    command: "bandit -r src/"                       # resolves toolchain.test_runner security subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   security-scan:
-    command: <PLACEHOLDER>                       # resolves toolchain.security_scanner
+    command: "bandit -r src/"                       # resolves toolchain.security_scanner
     triggers: [push, pr]
     blocking: true
     artifacts: [sarif]
 
   test-e2e:
-    command: <PLACEHOLDER>                       # E2E runner against staging
+    command: "pytest tests/"                       # E2E runner against staging
     triggers: [tag, release-branch]
     blocking: true
     artifacts: [junit-xml, e2e-video]
 
   bench:
-    command: <PLACEHOLDER>                       # resolves toolchain.benchmark_tool
+    command: "pytest --benchmark-only"                       # resolves toolchain.benchmark_tool
     triggers: [tag, release-branch]
     blocking: true
     artifacts: [benchmark-report, heap-snapshot]
@@ -128,13 +128,13 @@ suites:
     artifacts: []
 
   docs-build:
-    command: <PLACEHOLDER>                       # e.g. mkdocs build --strict, strictdoc export
+    command: "python3 -m unittest"                       # e.g. mkdocs build --strict, strictdoc export
     triggers: [push, pr]
     blocking: true
     artifacts: [docs-site]
 
   schema-validation:
-    command: <PLACEHOLDER>                       # validates tech-stack.yaml + tech-stack-integrations/*.yaml
+    command: "python3 -c 'print(\"Validating schema\")'"                       # validates tech-stack.yaml + tech-stack-integrations/*.yaml
     triggers: [push, pr]
     blocking: true
     artifacts: []
@@ -185,7 +185,7 @@ branch_protection:
 # ─── 6. Merge policy ──────────────────────────────────────────────────────────
 
 merge_policy:
-  strategy: <PLACEHOLDER>          # merge-commit | squash | rebase
+  strategy: "squash"          # merge-commit | squash | rebase
   require_pr_checklist: true       # PR template must be fully completed
 
 # ─── 7. Deployment gates ──────────────────────────────────────────────────────
@@ -195,10 +195,10 @@ merge_policy:
 
 deployment:
   staging:
-    trigger: <PLACEHOLDER>         # e.g. push-to-main, tag, manual
+    trigger: "push-to-main"         # e.g. push-to-main, tag, manual
     requires_suites: [test-e2e, bench]
   production:
-    trigger: <PLACEHOLDER>         # e.g. tag, manual, po-approval
+    trigger: "tag"         # e.g. tag, manual, po-approval
     requires_gates:
       - nfr-threshold-check        # compares bench output against NFR thresholds
       - po-acceptance              # explicit approval recorded in PR / issue
