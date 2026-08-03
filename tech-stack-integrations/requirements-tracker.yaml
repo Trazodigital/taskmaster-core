@@ -39,7 +39,7 @@ storage:
 # ─── 4. UID convention ────────────────────────────────────────────────────────
 
 uid:
-  pattern: "REQ-[A-Z]+-[0-9]+"            # framework-fixed; inherited from tech-stack.yaml
+  pattern: "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"  # framework-fixed; inherited from tech-stack.yaml
   types:                                  # extendable per project
     - ARCH
     - FUNC
@@ -80,9 +80,9 @@ commands:
 
 nfr_fields:
   required_for_types:
-    - NFR-PERF
-    - NFR-SEC
-    - NFR-USE
+    - REQ-NFR-PERF
+    - REQ-NFR-SEC
+    - REQ-NFR-USE
   fields:
     - METRIC
     - THRESHOLD
