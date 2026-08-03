@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gentle-ai/quality-framework/tech-stack-integrations/observability-platform.schema.json",
+  "title": "Observability Platform Interaction Contract",
+  "description": "Validates tech-stack-integrations/observability-platform.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "auth", "log_format", "deployment_sources", "commands", "gate"],
+  "properties": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "interaction_mode"],
+      "properties": {
+        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "interaction_mode": {
+          "oneOf": [
+            { "enum": ["rest-api", "cli", "sdk"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_mode", "runtime_credential_key", "ci_mode", "ci_credential_key"],
+      "properties": {
+        "runtime_mode": {
+          "oneOf": [
+            { "enum": ["workload-identity", "api-key", "token"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        },
+        "runtime_credential_key": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "ci_mode": {
+          "oneOf": [
+            { "enum": ["oidc", "service-principal", "token"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        },
+        "ci_credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "log_format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_types", "required_fields"],
+      "properties": {
+        "event_types": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["start", "end", "error"] }
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["timestamp", "level", "event_type", "feature", "req_uid", "correlation_id", "message"]
+          }
+        }
+      }
+    },
+    "deployment_sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alerts", "dashboards", "health_checks"],
+      "properties": {
+        "alerts":        { "const": "runtime-observability/alerts/" },
+        "dashboards":    { "const": "runtime-observability/dashboards/" },
+        "health_checks": { "const": "runtime-observability/health-checks/" }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deploy_alerts", "deploy_dashboards", "deploy_health_checks"],
+      "properties": {
+        "deploy_alerts":        { "$ref": "#/$defs/stringOrPlaceholder" },
+        "deploy_dashboards":    { "$ref": "#/$defs/stringOrPlaceholder" },
+        "deploy_health_checks": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on_missing_log_field",
+        "on_undeclared_event_type",
+        "on_deploy_failure",
+        "on_missing_alert_definition"
+      ],
+      "properties": {
+        "on_missing_log_field":        { "const": "hard-gate" },
+        "on_undeclared_event_type":    { "const": "hard-gate" },
+        "on_deploy_failure":           { "const": "hard-gate" },
+        "on_missing_alert_definition": { "const": "hard-gate" }
+      }
+    }
+  },
+  "$defs": {
+    "stringOrPlaceholder": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

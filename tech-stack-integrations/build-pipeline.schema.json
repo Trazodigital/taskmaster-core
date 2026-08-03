@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gentle-ai/quality-framework/tech-stack-integrations/build-pipeline.schema.json",
+  "title": "Build & Release Pipeline Interaction Contract",
+  "description": "Validates tech-stack-integrations/build-pipeline.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "suites", "artifacts", "branch_protection", "merge_policy", "deployment", "gate"],
+  "properties": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "interaction_mode"],
+      "properties": {
+        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "interaction_mode": {
+          "oneOf": [
+            { "enum": ["hosted-yaml", "cli", "rest-api"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "oneOf": [
+            { "enum": ["none", "token", "oauth", "basic"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        },
+        "credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "suites": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lint", "format-check", "type-check",
+        "test-unit", "test-integration", "test-security", "security-scan",
+        "test-e2e", "bench",
+        "traceability-gate", "glossary-gate", "nfr-fields-gate", "design-review-gate",
+        "design-review-gate-arch", "module-structure-gate",
+        "docs-build", "schema-validation"
+      ],
+      "properties": {
+        "lint":                { "$ref": "#/$defs/placeholderSuite" },
+        "format-check":        { "$ref": "#/$defs/placeholderSuite" },
+        "type-check":          { "$ref": "#/$defs/placeholderSuite" },
+        "test-unit":           { "$ref": "#/$defs/placeholderSuite" },
+        "test-integration":    { "$ref": "#/$defs/placeholderSuite" },
+        "test-security":       { "$ref": "#/$defs/placeholderSuite" },
+        "security-scan":       { "$ref": "#/$defs/placeholderSuite" },
+        "test-e2e":            { "$ref": "#/$defs/placeholderSuite" },
+        "bench":               { "$ref": "#/$defs/placeholderSuite" },
+        "docs-build":          { "$ref": "#/$defs/placeholderSuite" },
+        "schema-validation":   { "$ref": "#/$defs/placeholderSuite" },
+        "traceability-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-traceability.sh --phase verify --check-logging" } }
+        },
+        "glossary-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-glossary.sh" } }
+        },
+        "nfr-fields-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-nfr-fields.sh" } }
+        },
+        "design-review-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-design-review.sh" } }
+        },
+        "design-review-gate-arch": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-design-review.sh --scope architecture" } }
+        },
+        "module-structure-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": { "command": { "const": ".framework/scripts/check-module-structure.sh" } }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lint-report", "junit-xml", "coverage", "sarif",
+        "benchmark-report", "heap-snapshot", "e2e-video",
+        "traceability-matrix", "docs-site"
+      ],
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/artifactSpec" }
+      }
+    },
+    "branch_protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protected_branches", "required_checks", "min_reviewers",
+        "require_codeowners_review", "require_linear_history",
+        "allow_force_push", "allow_deletion"
+      ],
+      "properties": {
+        "protected_branches": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "required_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "min_reviewers": { "type": "integer", "minimum": 1 },
+        "require_codeowners_review": { "const": true },
+        "require_linear_history": { "const": true },
+        "allow_force_push": { "const": false },
+        "allow_deletion": { "const": false }
+      }
+    },
+    "merge_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "require_pr_checklist"],
+      "properties": {
+        "strategy": {
+          "oneOf": [
+            { "enum": ["merge-commit", "squash", "rebase"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        },
+        "require_pr_checklist": { "const": true }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staging", "production"],
+      "properties": {
+        "staging": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["trigger", "requires_suites"],
+          "properties": {
+            "trigger": { "$ref": "#/$defs/stringOrPlaceholder" },
+            "requires_suites": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "production": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["trigger", "requires_gates"],
+          "properties": {
+            "trigger": { "$ref": "#/$defs/stringOrPlaceholder" },
+            "requires_gates": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": ["nfr-threshold-check", "po-acceptance"]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on_suite_failure", "on_missing_artifact",
+        "on_branch_protection_bypass", "on_missing_review",
+        "on_nfr_regression", "on_missing_po_approval"
+      ],
+      "properties": {
+        "on_suite_failure": { "const": "hard-gate" },
+        "on_missing_artifact": { "const": "hard-gate" },
+        "on_branch_protection_bypass": { "const": "hard-gate" },
+        "on_missing_review": { "const": "hard-gate" },
+        "on_nfr_regression": { "const": "hard-gate" },
+        "on_missing_po_approval": { "const": "hard-gate" }
+      }
+    }
+  },
+  "$defs": {
+    "stringOrPlaceholder": {
+      "type": "string",
+      "minLength": 1
+    },
+    "triggerEnum": {
+      "enum": ["push", "pr", "tag", "release-branch", "schedule", "manual"]
+    },
+    "placeholderSuite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "triggers", "blocking", "artifacts"],
+      "properties": {
+        "command": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/triggerEnum" }
+        },
+        "blocking": { "const": true },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "scriptedSuite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "triggers", "blocking", "artifacts"],
+      "properties": {
+        "command": { "type": "string" },
+        "triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/triggerEnum" }
+        },
+        "blocking": { "const": true },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "artifactSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "retention"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "retention": {
+          "oneOf": [
+            { "enum": ["per-release", "historical"] },
+            { "type": "string", "pattern": "^[0-9]+d$" }
+          ]
+        }
+      }
+    }
+  }
+}

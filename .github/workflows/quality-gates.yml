@@ -1,0 +1,53 @@
+# Product CI: run the Quality Framework gates on every push / PR.
+# Installed into a product by scripts/init-product.sh at
+# .github/workflows/quality-gates.yml.
+name: quality-gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with the framework submodule)
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          # full history so PR base..head is resolvable for the commit-range gate
+          fetch-depth: 0
+
+      - name: Install the YAML parser the verifiers use
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Run Quality Framework gates
+        run: bash scripts/local_dry_CI_run_before_commit.sh
+
+      # Branch-name + commit-message gates, PR-aware. In CI the checked-out ref
+      # is a detached merge commit, so these run off the PR's real head branch
+      # and its actual commit range (base..head) rather than the detached HEAD.
+      - name: Convention gates (pull requests)
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          QF_ROOT="$PWD" .framework/scripts/check-branch-name.sh --branch "$HEAD_REF"
+          QF_ROOT="$PWD" .framework/scripts/check-commit-range.sh --range "$BASE_SHA..$HEAD_SHA"
+
+      # Architecture-first backstop: a feature/bugfix PR must not exist before
+      # the architecture layer does. Agent-time this is a workflows/sdd-new.md
+      # precondition; this step catches a bypassed agent or a hand-authored PR.
+      # Scoped to feature/bugfix branches so arch/* bootstrap PRs (which create
+      # the architecture) are not blocked by their own precondition.
+      - name: Architecture-exists gate (feature / bugfix PRs)
+        if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'feature/') || startsWith(github.head_ref, 'bugfix/'))
+        run: QF_ROOT="$PWD" .framework/scripts/check-architecture-exists.sh
+
+      # Non-blocking: publish the requirement traceability matrix
+      # (Implemented / Verified / Accepted / Released) to the run summary.
+      - name: Traceability report
+        if: always()
+        run: QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --report >> "$GITHUB_STEP_SUMMARY"

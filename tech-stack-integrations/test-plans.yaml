@@ -1,0 +1,77 @@
+# test-plans.yaml — Interaction contract for the formal / manual acceptance tracker
+#
+# Describes HOW the framework reads FORMAL, USER-ORIENTED acceptance evidence
+# (Azure Test Plans, TestRail, Xray, …) that backs the Phase-5 "Accepted" status.
+#
+# This is DISTINCT from automated CI verification. Two never-merged statuses:
+#   Verified — automated suites green in CI + @sdoc coverage (Phase 4,
+#              owned by verification-suite-execution). Blocks MERGE.
+#   Accepted — a formal/manual test case (TEST-xxx) with a PASS result here
+#              (Phase 5, owned by system-acceptance-gate). Blocks RELEASE.
+# Azure Test Plans NEVER gates a merge. Automated coverage passing does not make
+# a REQ "Accepted", and a missing acceptance record never blocks development — it
+# reads as `unknown` (fail-soft).
+#
+# TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
+# choice before any framework skill is invoked. Skills MUST hard-gate on any
+# remaining <PLACEHOLDER> value.
+#
+# OWNERSHIP: human-owned. The agent MUST read this file but MUST NOT create,
+# modify, rename, or delete it. See AGENTS.md § "Ownership boundaries".
+
+# ─── 1. Tool identity ─────────────────────────────────────────────────────────
+
+tool:
+  name: <PLACEHOLDER>              # e.g. azure-test-plans, testrail, xray
+  interaction_mode: <PLACEHOLDER>  # export-file | rest-api
+
+# ─── 2. Authentication ────────────────────────────────────────────────────────
+#
+# Only used when interaction_mode is rest-api. Leave placeholders in place when
+# interaction_mode is export-file — skills MUST skip auth resolution in that case.
+
+auth:
+  mode: <PLACEHOLDER>              # none | token | pat | oauth
+  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+
+# ─── 3. Project identity ──────────────────────────────────────────────────────
+
+project:
+  org: <PLACEHOLDER>               # e.g. the Azure DevOps organization
+  name: <PLACEHOLDER>              # e.g. the Azure DevOps project holding the test plans
+
+# ─── 4. Test-case ID convention ───────────────────────────────────────────────
+
+test_id:
+  pattern: "TEST-[0-9]+"           # framework-fixed
+  verifies_syntax: <PLACEHOLDER>   # how a test case references a REQ UID, e.g. "Verifies: REQ-FUNC-137"
+
+# ─── 5. Acceptance export ─────────────────────────────────────────────────────
+#
+# The traceability report reads this committed / exported file to resolve the
+# Accepted column — no live API call is required in the critical path.
+
+acceptance_export:
+  path: docs/acceptance/acceptance.json   # framework-fixed default
+  format: <PLACEHOLDER>                    # json | csv
+  refresh: <PLACEHOLDER>                   # how the export is regenerated, e.g. an `az devops` command
+
+# ─── 6. Result semantics (framework-fixed) ────────────────────────────────────
+
+results:
+  values:
+    - PASS
+    - FAIL
+    - BLOCKED
+    - NOT_RUN
+  accepted_when: PASS              # a REQ is "Accepted" only when its latest linked result is PASS
+
+# ─── 7. Gate policy ───────────────────────────────────────────────────────────
+#
+# Deliberate deviation from the framework's hard-gate default: acceptance is a
+# Phase-5 concern and NEVER blocks a merge.
+
+gate:
+  blocks_merge: never              # Accepted is never a merge gate
+  on_missing_export: unknown       # no export -> report `unknown`, do not fail (fail-soft)
+  on_fail_at_release: hard-gate    # a FAIL / BLOCKED result blocks the release gate

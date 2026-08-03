@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gentle-ai/quality-framework/tech-stack-integrations/issue-tracker.schema.json",
+  "title": "Issue Tracker Interaction Contract",
+  "description": "Validates tech-stack-integrations/issue-tracker.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "auth", "id", "labels", "linking", "commands", "gate"],
+  "properties": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "interaction_mode"],
+      "properties": {
+        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "interaction_mode": {
+          "oneOf": [
+            { "enum": ["rest-api", "cli", "webhook"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "credential_key"],
+      "properties": {
+        "mode": {
+          "oneOf": [
+            { "enum": ["none", "token", "oauth", "basic"] },
+            { "const": "<PLACEHOLDER>" }
+          ]
+        },
+        "credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "id": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "link_url_template"],
+      "properties": {
+        "pattern": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "link_url_template": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["types", "priority", "origin"],
+      "properties": {
+        "types": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["type:req", "type:bug", "type:feat", "type:adr", "type:refactor"] }
+        },
+        "priority": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["priority:critical", "priority:high", "priority:normal", "priority:low"] }
+        },
+        "origin": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["origin:prod", "origin:planning", "origin:security-audit"] }
+        }
+      }
+    },
+    "linking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit_reference_syntax", "pr_closes_syntax"],
+      "properties": {
+        "commit_reference_syntax": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "pr_closes_syntax": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["create_issue", "list_issues", "close_issue"],
+      "properties": {
+        "create_issue": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "list_issues": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "close_issue": { "$ref": "#/$defs/stringOrPlaceholder" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on_missing_issue_reference", "on_unknown_label", "on_missing_origin_label", "on_broken_link"],
+      "properties": {
+        "on_missing_issue_reference": { "const": "hard-gate" },
+        "on_unknown_label": { "const": "hard-gate" },
+        "on_missing_origin_label": { "const": "hard-gate" },
+        "on_broken_link": { "const": "hard-gate" }
+      }
+    }
+  },
+  "$defs": {
+    "stringOrPlaceholder": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

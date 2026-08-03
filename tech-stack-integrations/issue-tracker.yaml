@@ -1,0 +1,80 @@
+# issue-tracker.yaml — Interaction contract for the issue tracker
+#
+# Describes HOW the framework interacts with whatever tool holds backlog items
+# (GitHub Issues, GitLab Issues, Jira, Linear, Azure Boards, …). Skills read
+# this file to validate issue references in commits/PRs, create backlog items
+# from production feedback, and enforce label taxonomy.
+#
+# TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
+# choice before any framework skill is invoked. Skills MUST hard-gate on any
+# remaining <PLACEHOLDER> value.
+#
+# OWNERSHIP: human-owned. The agent MUST read this file but MUST NOT create,
+# modify, rename, or delete it. See AGENTS.md § "Ownership boundaries".
+
+# ─── 1. Tool identity ─────────────────────────────────────────────────────────
+
+tool:
+  name: <PLACEHOLDER>              # e.g. github-issues, gitlab-issues, jira, linear, azure-boards
+  interaction_mode: <PLACEHOLDER>  # rest-api | cli | webhook
+
+# ─── 2. Authentication ────────────────────────────────────────────────────────
+
+auth:
+  mode: <PLACEHOLDER>              # none | token | oauth | basic
+  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+
+# ─── 3. Issue ID convention ───────────────────────────────────────────────────
+
+id:
+  pattern: <PLACEHOLDER>            # regex, e.g. "#[0-9]+" (GitHub), "[A-Z]+-[0-9]+" (Jira, Linear)
+  link_url_template: <PLACEHOLDER>  # URL template with {id}, e.g. "https://github.com/acme/orders-api/issues/{id}"
+
+# ─── 4. Label taxonomy (framework-fixed) ──────────────────────────────────────
+#
+# All labels below MUST exist in the tracker before the framework is used.
+# Skills MUST reject any label not listed here. Provisioning is a human task.
+
+labels:
+  types:
+    - type:req                     # backlog item derived from a requirement
+    - type:bug
+    - type:feat
+    - type:adr                     # ADR-tracking item
+    - type:refactor
+  priority:
+    - priority:critical
+    - priority:high
+    - priority:normal
+    - priority:low
+  origin:
+    - origin:prod                  # created from production feedback (Phase 6.C.1)
+    - origin:planning              # created during sdd-propose
+    - origin:security-audit        # created from security-scan or audit findings
+
+# ─── 5. Linking syntax ────────────────────────────────────────────────────────
+
+linking:
+  commit_reference_syntax: <PLACEHOLDER>   # e.g. "refs #{id}", "ORDERS-{id}"
+  pr_closes_syntax: <PLACEHOLDER>          # e.g. "closes #{id}", "Closes: {id}"
+
+# ─── 6. Commands ──────────────────────────────────────────────────────────────
+#
+# Concrete invocations for programmatic issue operations. Skills invoke these
+# verbatim (e.g. production-observability creates a Phase 6.C.1 backlog item).
+
+commands:
+  create_issue: <PLACEHOLDER>              # e.g. gh issue create --title '{title}' --label '{labels}' --body '{body}'
+  list_issues:  <PLACEHOLDER>              # e.g. gh issue list --label '{label}' --json number,title
+  close_issue:  <PLACEHOLDER>              # e.g. gh issue close {id} --comment '{comment}'
+
+# ─── 7. Gate policy ───────────────────────────────────────────────────────────
+#
+# Every violation MUST hard-gate: the agent reports the exact violation, stops,
+# and waits for a human. No warn-and-continue.
+
+gate:
+  on_missing_issue_reference: hard-gate    # commit or PR without an issue ID matching id.pattern
+  on_unknown_label: hard-gate               # a label used that isn't in the taxonomy above
+  on_missing_origin_label: hard-gate        # issue created by a skill without an origin:* label
+  on_broken_link: hard-gate                 # link_url_template renders to a URL that doesn't resolve

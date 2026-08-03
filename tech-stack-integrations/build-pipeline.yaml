@@ -1,0 +1,217 @@
+# build-pipeline.yaml — Interaction contract for the build & release pipeline
+#
+# Describes HOW the framework interacts with whatever system builds, tests, and
+# releases the project (GitHub Actions, GitLab CI, Azure DevOps Pipelines,
+# Jenkins, Buildkite, …). Skills read this file to resolve suite commands,
+# artifact publishing paths, and branch protection rules.
+#
+# TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
+# choice before any framework skill is invoked. Skills MUST hard-gate on any
+# remaining <PLACEHOLDER> value.
+#
+# OWNERSHIP: human-owned. The agent MUST read this file but MUST NOT create,
+# modify, rename, or delete it. See AGENTS.md § "Ownership boundaries".
+
+# ─── 1. Tool identity ─────────────────────────────────────────────────────────
+
+tool:
+  name: <PLACEHOLDER>              # e.g. github-actions, gitlab-ci, azure-devops-pipelines
+  interaction_mode: <PLACEHOLDER>  # hosted-yaml | cli | rest-api
+
+# ─── 2. Authentication ────────────────────────────────────────────────────────
+#
+# Only used when the agent needs to trigger pipelines or read status via API.
+# Leave placeholders in place when interaction_mode is hosted-yaml.
+
+auth:
+  mode: <PLACEHOLDER>              # none | token | oauth | basic
+  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+
+# ─── 3. Suites ────────────────────────────────────────────────────────────────
+#
+# Each suite declares the command to run, whether it blocks merge, the events
+# that trigger it, and the artifacts it produces. Commands referencing
+# .framework/scripts/*.sh are framework-fixed (run with QF_ROOT set to the repo
+# root — the gate scripts live inside the submodule). Valid triggers:
+# push | pr | tag | release-branch | schedule | manual
+
+suites:
+
+  lint:
+    command: <PLACEHOLDER>                       # resolves toolchain.linter from tech-stack.yaml
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [lint-report]
+
+  format-check:
+    command: <PLACEHOLDER>                       # resolves toolchain.formatter --check
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  type-check:
+    command: <PLACEHOLDER>                       # e.g. tsc --noEmit, mypy, go vet
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  test-unit:
+    command: <PLACEHOLDER>                       # resolves toolchain.test_runner unit subset
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [junit-xml, coverage]
+
+  test-integration:
+    command: <PLACEHOLDER>                       # resolves toolchain.test_runner integration subset
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [junit-xml]
+
+  test-security:
+    command: <PLACEHOLDER>                       # resolves toolchain.test_runner security subset
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [junit-xml]
+
+  security-scan:
+    command: <PLACEHOLDER>                       # resolves toolchain.security_scanner
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [sarif]
+
+  test-e2e:
+    command: <PLACEHOLDER>                       # E2E runner against staging
+    triggers: [tag, release-branch]
+    blocking: true
+    artifacts: [junit-xml, e2e-video]
+
+  bench:
+    command: <PLACEHOLDER>                       # resolves toolchain.benchmark_tool
+    triggers: [tag, release-branch]
+    blocking: true
+    artifacts: [benchmark-report, heap-snapshot]
+
+  traceability-gate:
+    command: .framework/scripts/check-traceability.sh --phase verify --check-logging   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [traceability-matrix]
+
+  glossary-gate:
+    command: .framework/scripts/check-glossary.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  nfr-fields-gate:
+    command: .framework/scripts/check-nfr-fields.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  design-review-gate:
+    command: .framework/scripts/check-design-review.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  design-review-gate-arch:
+    command: .framework/scripts/check-design-review.sh --scope architecture   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  module-structure-gate:
+    command: .framework/scripts/check-module-structure.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  docs-build:
+    command: <PLACEHOLDER>                       # e.g. mkdocs build --strict, strictdoc export
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [docs-site]
+
+  schema-validation:
+    command: <PLACEHOLDER>                       # validates tech-stack.yaml + tech-stack-integrations/*.yaml
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+# ─── 4. Artifacts ─────────────────────────────────────────────────────────────
+#
+# Declares each artifact class produced by suites, its published location, and
+# retention. The concrete artifact store is described in
+# tech-stack-integrations/artifact-store.yaml.
+
+artifacts:
+  lint-report:         { path: reports/lint/,          retention: 30d }
+  junit-xml:           { path: reports/junit/,         retention: per-release }
+  coverage:            { path: reports/coverage/,      retention: per-release }
+  sarif:               { path: reports/security/,      retention: per-release }
+  benchmark-report:    { path: reports/bench/,         retention: historical }
+  heap-snapshot:       { path: reports/heap/,          retention: per-release }
+  e2e-video:           { path: reports/e2e/,           retention: 30d }
+  traceability-matrix: { path: reports/traceability/,  retention: per-release }
+  docs-site:           { path: reports/docs/,          retention: per-release }
+
+# ─── 5. Branch protection ─────────────────────────────────────────────────────
+
+branch_protection:
+  protected_branches: [main]
+  required_checks:                                 # all blocking suites triggered on push/pr
+    - lint
+    - format-check
+    - type-check
+    - test-unit
+    - test-integration
+    - test-security
+    - security-scan
+    - traceability-gate
+    - glossary-gate
+    - nfr-fields-gate
+    - design-review-gate
+    - design-review-gate-arch
+    - module-structure-gate
+    - docs-build
+    - schema-validation
+  min_reviewers: 1                                 # four-eyes principle
+  require_codeowners_review: true
+  require_linear_history: true
+  allow_force_push: false
+  allow_deletion: false
+
+# ─── 6. Merge policy ──────────────────────────────────────────────────────────
+
+merge_policy:
+  strategy: <PLACEHOLDER>          # merge-commit | squash | rebase
+  require_pr_checklist: true       # PR template must be fully completed
+
+# ─── 7. Deployment gates ──────────────────────────────────────────────────────
+#
+# Phase 5's system-acceptance-gate is expressed here as a sequence of gates
+# that MUST pass before promotion. Skills MUST NOT bypass any step.
+
+deployment:
+  staging:
+    trigger: <PLACEHOLDER>         # e.g. push-to-main, tag, manual
+    requires_suites: [test-e2e, bench]
+  production:
+    trigger: <PLACEHOLDER>         # e.g. tag, manual, po-approval
+    requires_gates:
+      - nfr-threshold-check        # compares bench output against NFR thresholds
+      - po-acceptance              # explicit approval recorded in PR / issue
+
+# ─── 8. Gate policy ───────────────────────────────────────────────────────────
+#
+# Every violation MUST hard-gate: the agent reports the exact violation, stops,
+# and waits for a human. No warn-and-continue.
+
+gate:
+  on_suite_failure: hard-gate
+  on_missing_artifact: hard-gate
+  on_branch_protection_bypass: hard-gate
+  on_missing_review: hard-gate
+  on_nfr_regression: hard-gate
+  on_missing_po_approval: hard-gate

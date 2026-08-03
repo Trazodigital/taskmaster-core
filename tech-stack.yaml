@@ -1,0 +1,71 @@
+# tech-stack.yaml — Quality Framework Layer 2 configuration
+#
+# This file is the SINGLE resolver every framework skill consults to translate
+# generic behavior (e.g. "run the linter", "record a REQ UID") into concrete
+# tool invocations, paths, and syntaxes.
+#
+# TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
+# choice before any framework skill is invoked. Skills MUST hard-gate on any
+# remaining <PLACEHOLDER> value.
+#
+# OWNERSHIP: human-owned. The agent MUST read this file but MUST NOT create,
+# modify, rename, or delete it. See AGENTS.md § "Ownership boundaries".
+
+# ─── 1. Project identity ──────────────────────────────────────────────────────
+
+project:
+  name: <PLACEHOLDER>              # short human-readable name, e.g. "orders-api"
+  language: <PLACEHOLDER>          # e.g. typescript, python, go, rust
+  runtime: <PLACEHOLDER>           # e.g. node@20, python@3.12, go@1.22
+  package_manager: <PLACEHOLDER>   # e.g. pnpm, uv, go-modules
+
+# ─── 2. Toolchain (flat facts referenced by skills) ───────────────────────────
+
+toolchain:
+  linter: <PLACEHOLDER>            # e.g. oxlint, ruff, golangci-lint
+  formatter: <PLACEHOLDER>         # e.g. prettier, ruff-format, gofmt
+  test_runner: <PLACEHOLDER>       # e.g. vitest, pytest, go-test
+  coverage_tool: <PLACEHOLDER>     # e.g. c8, coverage.py, go-cover
+  security_scanner: <PLACEHOLDER>  # e.g. trufflehog, bandit, gosec
+  benchmark_tool: <PLACEHOLDER>    # e.g. vitest-bench, pytest-benchmark, go-test-bench
+
+# ─── 3. Conventions (values the framework enforces) ───────────────────────────
+
+conventions:
+  req_uid_pattern: "REQ-[A-Z]+-[0-9]+"
+  adr_slug_pattern: "[0-9]{4}-[a-z0-9-]+"
+  commit_style: conventional-commits
+  branching: trunk-based
+  file_layout:
+    requirements_dir: docs/requirements
+    design_dir: docs/design
+    adr_dir: docs/adr
+    src_dir: src
+    tests_dir: tests
+
+# ─── 4. Traceability markers (syntax resolved per language) ───────────────────
+
+markers:
+  sdoc_marker: "@sdoc[<UID>]"
+  adr_marker: "@adr[<NNNN>]"
+  comment_style: <PLACEHOLDER>     # e.g. jsdoc, python-docstring, godoc
+
+# ─── 5. Integration contract pointers ─────────────────────────────────────────
+#
+# Each entry points to a detailed interaction contract under
+# tech-stack-integrations/. Skills MUST read the referenced file before
+# interacting with the corresponding external system.
+
+integrations:
+  build_pipeline: tech-stack-integrations/build-pipeline.yaml
+  issue_tracker: tech-stack-integrations/issue-tracker.yaml
+  requirements_tracker: tech-stack-integrations/requirements-tracker.yaml
+  artifact_store: tech-stack-integrations/artifact-store.yaml
+  secrets_vault: tech-stack-integrations/secrets-vault.yaml
+  observability_platform: tech-stack-integrations/observability-platform.yaml
+
+# ─── 6. Framework metadata (do not modify) ────────────────────────────────────
+
+framework:
+  version: 0.1.0
+  ownership: human-owned

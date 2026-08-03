@@ -1,0 +1,9 @@
+# Product-local, never committed
+.env
+.env.local
+.env.*.local
+node_modules/
+dist/
+build/
+reports/
+*.gate.json

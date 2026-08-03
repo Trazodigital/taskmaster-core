@@ -1,0 +1,101 @@
+# requirements-tracker.yaml — Interaction contract for the requirements tracker
+#
+# Describes HOW the framework interacts with whatever tool stores requirements
+# (StrictDoc, DOORS Next, Jira with a REQ plugin, plain markdown files, etc.).
+# Skills read this file to resolve tool-specific commands, marker placement,
+# and gate behavior.
+#
+# TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
+# choice before any framework skill is invoked. Skills MUST hard-gate on any
+# remaining <PLACEHOLDER> value.
+#
+# OWNERSHIP: human-owned. The agent MUST read this file but MUST NOT create,
+# modify, rename, or delete it. See AGENTS.md § "Ownership boundaries".
+
+# ─── 1. Tool identity ─────────────────────────────────────────────────────────
+
+tool:
+  name: <PLACEHOLDER>              # e.g. strictdoc, doors-next, jira-req
+  interaction_mode: <PLACEHOLDER>  # local-files | cli | rest-api | webhook
+
+# ─── 2. Authentication ────────────────────────────────────────────────────────
+#
+# Only used when interaction_mode is rest-api or webhook. Leave placeholders
+# in place when interaction_mode is local-files or cli — skills MUST skip
+# auth resolution in that case.
+
+auth:
+  mode: <PLACEHOLDER>              # none | token | oauth | basic
+  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+
+# ─── 3. Storage layout ────────────────────────────────────────────────────────
+
+storage:
+  requirements_dir: docs/requirements     # framework-fixed
+  file_extension: <PLACEHOLDER>           # e.g. sdoc, md, yaml
+  one_file_per: <PLACEHOLDER>             # feature | requirement | project
+  glossary_file: docs/glossary.md         # framework-fixed
+
+# ─── 4. UID convention ────────────────────────────────────────────────────────
+
+uid:
+  pattern: "REQ-[A-Z]+-[0-9]+"            # framework-fixed; inherited from tech-stack.yaml
+  types:                                  # extendable per project
+    - ARCH
+    - FUNC
+    - NFR-PERF
+    - NFR-SEC
+    - NFR-USE
+  uniqueness_check: <PLACEHOLDER>         # command that exits 0 if all UIDs are unique
+
+# ─── 5. Traceability markers ──────────────────────────────────────────────────
+
+markers:
+  syntax: "@sdoc[<UID>]"                  # framework-fixed
+  comment_style: <PLACEHOLDER>            # jsdoc | python-docstring | godoc | rustdoc
+  scan_paths:                             # framework-fixed
+    - src
+    - tests
+  ignore_paths:
+    - node_modules
+    - dist
+    - build
+    - .venv
+    - target
+
+# ─── 6. Commands ──────────────────────────────────────────────────────────────
+#
+# Concrete invocations per capability. Skills invoke these verbatim.
+# Values under scripts/ are framework-fixed and MUST NOT be changed.
+
+commands:
+  validate_corpus: <PLACEHOLDER>          # e.g. "strictdoc passthrough docs/requirements/"
+  export_matrix: <PLACEHOLDER>            # e.g. "strictdoc export --format=html docs/requirements/"
+  check_uniqueness: <PLACEHOLDER>         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
+  check_glossary: scripts/check-glossary.sh
+  check_nfr_fields: scripts/check-nfr-fields.sh
+  check_traceability: scripts/check-traceability.sh
+
+# ─── 7. NFR field schema ──────────────────────────────────────────────────────
+
+nfr_fields:
+  required_for_types:
+    - NFR-PERF
+    - NFR-SEC
+    - NFR-USE
+  fields:
+    - METRIC
+    - THRESHOLD
+    - MEASUREMENT_METHOD
+
+# ─── 8. Gate policy ───────────────────────────────────────────────────────────
+#
+# Every violation MUST hard-gate: the agent reports the exact violation, stops,
+# and waits for a human. No warn-and-continue.
+
+gate:
+  on_orphan_marker: hard-gate
+  on_missing_marker: hard-gate
+  on_duplicate_uid: hard-gate
+  on_missing_nfr_field: hard-gate
+  on_undefined_glossary_term: hard-gate
