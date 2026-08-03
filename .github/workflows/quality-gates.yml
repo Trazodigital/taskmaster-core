@@ -17,6 +17,16 @@ jobs:
           submodules: recursive
           # full history so PR base..head is resolvable for the commit-range gate
           fetch-depth: 0
+          # .framework is a submodule living in a SEPARATE private org repo
+          # (Trazodigital/Team_Repo_Quality_Framework_Gentle.ai). The default
+          # GITHUB_TOKEN is scoped to this repository alone, so cloning it fails
+          # with "remote: Repository not found" and every gate step then dies on
+          # a missing .framework/scripts/. FRAMEWORK_PAT must carry read access
+          # to BOTH repositories. The fallback keeps the default token when the
+          # secret is absent (fork PRs cannot read secrets), which fails at the
+          # submodule clone exactly as it does today rather than on an empty
+          # credential.
+          token: ${{ secrets.FRAMEWORK_PAT || github.token }}
 
       - name: Install the YAML parser the verifiers use
         run: python3 -m pip install --quiet pyyaml
