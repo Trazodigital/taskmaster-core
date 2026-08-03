@@ -34,7 +34,21 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          QF_ROOT="$PWD" .framework/scripts/check-branch-name.sh --branch "$HEAD_REF"
+          # check-branch-name.sh enforces (feature|bugfix)/<REQ-UID>-<slug> and
+          # exempts only main/master/develop/HEAD/release/*. sdd-architecture.md
+          # Preconditions #3 mandates arch/<slug>, which that gate would reject,
+          # so architecture branches are validated against their own convention
+          # here rather than skipped.
+          case "$HEAD_REF" in
+            arch/*)
+              printf '%s' "$HEAD_REF" | grep -qE '^arch/[a-z][a-z0-9-]*$' \
+                || { echo "hard-gate: architecture branch '$HEAD_REF' is not 'arch/<slug>'" >&2; exit 1; }
+              echo "branch '$HEAD_REF' matches the architecture convention arch/<slug>."
+              ;;
+            *)
+              QF_ROOT="$PWD" .framework/scripts/check-branch-name.sh --branch "$HEAD_REF"
+              ;;
+          esac
           QF_ROOT="$PWD" .framework/scripts/check-commit-range.sh --range "$BASE_SHA..$HEAD_SHA"
 
       # Architecture-first backstop: a feature/bugfix PR must not exist before
