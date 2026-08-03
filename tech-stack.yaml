@@ -14,20 +14,20 @@
 # ─── 1. Project identity ──────────────────────────────────────────────────────
 
 project:
-  name: <PLACEHOLDER>              # short human-readable name, e.g. "orders-api"
-  language: <PLACEHOLDER>          # e.g. typescript, python, go, rust
-  runtime: <PLACEHOLDER>           # e.g. node@20, python@3.12, go@1.22
-  package_manager: <PLACEHOLDER>   # e.g. pnpm, uv, go-modules
+  name: "taskmaster-core"          # short human-readable name, e.g. "orders-api"
+  language: "python"               # e.g. typescript, python, go, rust
+  runtime: "python@3.12"           # e.g. node@20, python@3.12, go@1.22
+  package_manager: "pip"           # e.g. pnpm, uv, go-modules
 
 # ─── 2. Toolchain (flat facts referenced by skills) ───────────────────────────
 
 toolchain:
-  linter: <PLACEHOLDER>            # e.g. oxlint, ruff, golangci-lint
-  formatter: <PLACEHOLDER>         # e.g. prettier, ruff-format, gofmt
-  test_runner: <PLACEHOLDER>       # e.g. vitest, pytest, go-test
-  coverage_tool: <PLACEHOLDER>     # e.g. c8, coverage.py, go-cover
-  security_scanner: <PLACEHOLDER>  # e.g. trufflehog, bandit, gosec
-  benchmark_tool: <PLACEHOLDER>    # e.g. vitest-bench, pytest-benchmark, go-test-bench
+  linter: "flake8"                 # e.g. oxlint, ruff, golangci-lint
+  formatter: "black"               # e.g. prettier, ruff-format, gofmt
+  test_runner: "pytest"            # e.g. vitest, pytest, go-test
+  coverage_tool: "coverage.py"     # e.g. c8, coverage.py, go-cover
+  security_scanner: "bandit"       # e.g. trufflehog, bandit, gosec
+  benchmark_tool: "pytest-benchmark" # e.g. vitest-bench, pytest-benchmark, go-test-bench
 
 # ─── 3. Conventions (values the framework enforces) ───────────────────────────
 
@@ -48,7 +48,7 @@ conventions:
 markers:
   sdoc_marker: "@sdoc[<UID>]"
   adr_marker: "@adr[<NNNN>]"
-  comment_style: <PLACEHOLDER>     # e.g. jsdoc, python-docstring, godoc
+  comment_style: "python-docstring" # e.g. jsdoc, python-docstring, godoc
 
 # ─── 5. Integration contract pointers ─────────────────────────────────────────
 #

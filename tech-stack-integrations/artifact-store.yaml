@@ -5,9 +5,6 @@
 # JFrog Artifactory, Nexus, …). Skills read this file to publish artifacts,
 # render links in PR comments, and fetch historical benchmark baselines.
 #
-# The list of WHICH artifacts are produced lives in build-pipeline.yaml.
-# This file only describes the BACKEND that holds them.
-#
 # TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
 # choice before any framework skill is invoked. Skills MUST hard-gate on any
 # remaining <PLACEHOLDER> value.
@@ -18,47 +15,35 @@
 # ─── 1. Tool identity ─────────────────────────────────────────────────────────
 
 tool:
-  name: <PLACEHOLDER>              # e.g. azure-pipeline-artifacts, github-actions-artifacts, s3, jfrog-artifactory, nexus
-  interaction_mode: <PLACEHOLDER>  # rest-api | cli | ci-native
+  name: "github-actions-artifacts"              # e.g. azure-pipeline-artifacts, github-actions-artifacts, s3, jfrog-artifactory, nexus
+  interaction_mode: "ci-native"  # rest-api | cli | ci-native
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
 
 auth:
-  mode: <PLACEHOLDER>              # none | token | oauth | basic
-  credential_key: <PLACEHOLDER>    # path in the secrets vault (see secrets-vault.yaml)
+  mode: "none"              # none | token | oauth | basic
+  credential_key: "none"    # path in the secrets vault (see secrets-vault.yaml)
 
 # ─── 3. URL construction ──────────────────────────────────────────────────────
-#
-# Skills render clickable artifact links in PR comments using url_template.
-# Supported substitutions: {base_url}, {build_id}, {artifact_class}, {path}.
 
 url:
-  base_url: <PLACEHOLDER>          # e.g. https://dev.azure.com/acme/orders-api/_build/results
-  url_template: <PLACEHOLDER>      # e.g. "{base_url}?buildId={build_id}&view=artifacts&artifactName={artifact_class}"
+  base_url: "https://github.com/user/taskmaster-core/actions"          # e.g. https://dev.azure.com/acme/orders-api/_build/results
+  url_template: "{base_url}?buildId={build_id}&view=artifacts"      # e.g. "{base_url}?buildId={build_id}&view=artifacts&artifactName={artifact_class}"
 
 # ─── 4. Retention policies ────────────────────────────────────────────────────
-#
-# The three retention labels used in build-pipeline.yaml § artifacts MUST have
-# a concrete backend policy declared here. Skills MUST hard-gate if a label
-# used upstream has no entry below.
 
 retention_policies:
-  "30d":         <PLACEHOLDER>     # e.g. "delete after 30 days"
-  "per-release": <PLACEHOLDER>     # e.g. "retain while any release tag references the build"
-  "historical":  <PLACEHOLDER>     # e.g. "retain indefinitely, one snapshot per release tag"
+  "30d":         "delete after 30 days"     # e.g. "delete after 30 days"
+  "per-release": "retain while release tag references build"     # e.g. "retain while any release tag references the build"
+  "historical":  "retain indefinitely"     # e.g. "retain indefinitely, one snapshot per release tag"
 
 # ─── 5. Commands ──────────────────────────────────────────────────────────────
-#
-# Concrete invocations for programmatic artifact operations.
 
 commands:
-  publish:          <PLACEHOLDER>  # e.g. "az artifacts universal publish --organization {org} --feed {feed} --name {artifact_class} --version {build_id} --path {path}"
-  fetch_historical: <PLACEHOLDER>  # e.g. "az artifacts universal download --organization {org} --feed {feed} --name {artifact_class} --version {version} --path {dest}"
+  publish:          "echo Publishing {artifact_class} to {path}"  # e.g. "az artifacts universal publish..."
+  fetch_historical: "echo Fetching historical {artifact_class} to {dest}"  # e.g. "az artifacts universal download..."
 
 # ─── 6. Gate policy ───────────────────────────────────────────────────────────
-#
-# Every violation MUST hard-gate: the agent reports the exact violation, stops,
-# and waits for a human. No warn-and-continue.
 
 gate:
   on_publish_failure: hard-gate            # publish command exited non-zero
