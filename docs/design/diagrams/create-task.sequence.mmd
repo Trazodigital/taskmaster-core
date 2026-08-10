@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant CLI
+    participant ArgparseCommandInput
+    participant TasksService
+    participant JsonFileTaskRepository
+
+    Note over User,JsonFileTaskRepository: Feature - create a task from the CLI (refines architecture Flow 1)
+
+    User->>CLI: issues command (create task with title and optional due date)
+    CLI->>ArgparseCommandInput: parse command arguments
+
+    alt title missing or blank
+        ArgparseCommandInput-->>CLI: rejected command (invalid title)
+        CLI-->>User: validation error message
+        Note over CLI,JsonFileTaskRepository: no persistence attempted on invalid input
+    else title present
+        ArgparseCommandInput-->>CLI: parsed create-task command
+        CLI->>TasksService: create task
+        TasksService->>JsonFileTaskRepository: persist task
+
+        alt persisted
+            JsonFileTaskRepository-->>TasksService: persisted task id
+            TasksService-->>CLI: created task
+            CLI-->>User: confirmation with task id
+        else storage unavailable or write timed out
+            JsonFileTaskRepository-->>TasksService: storage error
+            TasksService-->>CLI: creation failed
+            CLI-->>User: explicit error message
+            Note over TasksService,JsonFileTaskRepository: failure never reported as success
+        end
+
+        Note over TasksService,JsonFileTaskRepository: write timeout 5s, no retry
+    end
