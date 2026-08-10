@@ -28,6 +28,15 @@ jobs:
           # credential.
           token: ${{ secrets.FRAMEWORK_PAT || github.token }}
 
+      # Pin the interpreter to the one tech-stack.yaml § project.runtime
+      # declares. Without this the job takes whatever python3 the runner image
+      # happens to ship, so the declared runtime is decorative and a GitHub
+      # image bump can change behaviour with no commit of ours.
+      - name: Use the declared Python runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
       - name: Install the YAML parser the verifiers use
         run: python3 -m pip install --quiet pyyaml
 
