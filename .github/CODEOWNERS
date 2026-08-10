@@ -1,3 +1,13 @@
 # Review ownership. Required by code-review-gate --architecture-only, which
 # resolves the approvers for the architecture layer from this file.
-docs/architecture/ @MFei8ht
+#
+# Two owners on one line, on purpose. GitHub never requests a review from the
+# pull request author (the API rejects it with 422 "Review cannot be requested
+# from pull request author"), so a single-owner line requests nobody whenever
+# that owner is the one opening the PR. With both listed, whichever one authors
+# the PR, the other is auto-requested. Any one approval satisfies the rule.
+#
+# @alexxo is the same human as @abecerriltrazodigital (personal vs. Trazodigital
+# account). Only the org account is listed: adding both would let one person
+# satisfy the four-eyes rule alone.
+docs/architecture/ @MFei8ht @abecerriltrazodigital
