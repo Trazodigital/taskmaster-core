@@ -7,6 +7,8 @@ import pytest
 
 from src.cli.command_input import CreateTaskCommand, InvalidCommand
 from src.cli.command_input import parse_create_task
+from src.storage.in_memory import InMemoryTaskRepository
+from src.tasks.create_task import create_task
 
 
 @pytest.mark.parametrize("title", [None, "", "   ", "\t\n"])
@@ -28,3 +30,16 @@ def test_title_is_accepted_and_trimmed():
 
     assert isinstance(command, CreateTaskCommand)
     assert command.title == "buy milk"
+
+
+def test_rejected_command_never_reaches_the_repository():
+    """Rejection happens before tasks or storage are involved.
+
+    @sdoc[REQ-FUNC-002]
+    """
+    repository = InMemoryTaskRepository()
+
+    with pytest.raises(InvalidCommand):
+        create_task(parse_create_task("   "), repository, "corr-1")
+
+    assert repository.stored("1") is None
