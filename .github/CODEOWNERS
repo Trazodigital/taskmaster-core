@@ -10,4 +10,11 @@
 # @alexxo is the same human as @abecerriltrazodigital (personal vs. Trazodigital
 # account). Only the org account is listed: adding both would let one person
 # satisfy the four-eyes rule alone.
-docs/architecture/ @MFei8ht @abecerriltrazodigital
+#
+# USER_MANUAL.md § 9.4 declares three architecture-owned paths, not one. The
+# tech-stack files are human-owned configuration (AGENTS.md § "Ownership
+# boundaries" forbids the agent from editing them), so a change there is an
+# architecture decision and needs the same approval as docs/architecture/.
+docs/architecture/       @MFei8ht @abecerriltrazodigital
+tech-stack.yaml          @MFei8ht @abecerriltrazodigital
+tech-stack-integrations/ @MFei8ht @abecerriltrazodigital
