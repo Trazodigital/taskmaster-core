@@ -1,0 +1,31 @@
+# Development toolchain declared by tech-stack.yaml § toolchain.
+#
+# USER_MANUAL.md § 5.3 requires this toolchain to be installed before Phase 3
+# (tdd-cycle-enforcement) can run: every suite command in
+# tech-stack-integrations/build-pipeline.yaml resolves to one of these tools.
+#
+# Install into a project-local virtualenv so the machine's Python stays clean:
+#
+#   python3 -m venv .venv
+#   .venv/bin/pip install -r requirements-dev.txt
+#
+# CI installs the same file (see .github/workflows/quality-gates.yml), so the
+# suites resolve identically locally and on GitHub Actions.
+
+# suites.test-unit / suites.test-integration -> "pytest tests/"
+pytest==8.3.4
+
+# suites.lint -> "flake8 src/"
+flake8==7.1.1
+
+# suites.test-security -> "bandit -r src/"
+bandit==1.8.0
+
+# toolchain.formatter
+black==24.10.0
+
+# toolchain.coverage_tool
+coverage==7.6.9
+
+# toolchain.benchmark_tool (NFR benchmarks, Phase 5)
+pytest-benchmark==5.1.0

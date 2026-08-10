@@ -62,6 +62,22 @@ export QF_ROOT="$ROOT"
 "$FW/check-nfr-fields.sh"
 "$FW/check-mermaid.sh" --all
 
+# check-mermaid.sh --all scans docs/architecture/diagrams only (it hard-codes
+# that directory), so feature diagrams under docs/design/diagrams/ were never
+# validated by any gate — even though USER_MANUAL.md § 7.2 makes the feature
+# sequence diagram the authoritative source of every ACCEPTANCE_CRITERIA triple.
+# Validate them here, one file at a time, with the same Tier-1 checks.
+DESIGN_DIAGRAMS="$ROOT/docs/design/diagrams"
+if [ -d "$DESIGN_DIAGRAMS" ]; then
+  design_scanned=0
+  for mmd in "$DESIGN_DIAGRAMS"/*.sequence.mmd; do
+    [ -e "$mmd" ] || continue
+    "$FW/check-mermaid.sh" --file "${mmd#"$ROOT"/}" --kind sequence
+    design_scanned=$((design_scanned + 1))
+  done
+  echo "$PROG: feature diagrams validated: $design_scanned" >&2
+fi
+
 if [ "$TRACK" = architecture ]; then
   # Architecture PRs are metadata-only: workflows/sdd-architecture.md forbids
   # any change under src/ or tests/ ("Implementation drift") and skips Phase 3

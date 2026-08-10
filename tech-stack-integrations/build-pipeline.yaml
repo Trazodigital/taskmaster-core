@@ -50,7 +50,10 @@ suites:
     artifacts: []
 
   type-check:
-    command: "python3 -m py_compile src/**/*.py"                       # e.g. tsc --noEmit, mypy, go vet
+    # `py_compile src/**/*.py` needs globstar, which is off by default in bash
+    # and absent in sh, so it silently checked only the first directory level.
+    # compileall is the same check with a working recursive walk.
+    command: "python3 -m compileall -q src/"                       # e.g. tsc --noEmit, mypy, go vet
     triggers: [push, pr]
     blocking: true
     artifacts: []
@@ -215,3 +218,22 @@ gate:
   on_missing_review: hard-gate
   on_nfr_regression: hard-gate
   on_missing_po_approval: hard-gate
+
+  # The six keys above ship with the framework template. The keys below are read
+  # by skills that had no value to resolve, which would have surfaced as a
+  # Phase 4 hard-gate with nothing to compare against:
+  #   verification-suite-execution -> min_coverage_percent, on_suite_failure,
+  #                                   on_artifact_publish_failure,
+  #                                   on_coverage_regression
+  #   code-review-gate             -> on_review_failure
+  #   system-acceptance-gate       -> on_acceptance_failure,
+  #                                   on_rollback_unavailable
+  # Those skills spell the section `gates.` while the schema requires `gate`;
+  # the section name stays singular here because build-pipeline.schema.json
+  # declares it required and rejects unknown top-level keys.
+  min_coverage_percent: 80
+  on_review_failure: hard-gate
+  on_artifact_publish_failure: hard-gate
+  on_coverage_regression: hard-gate
+  on_acceptance_failure: hard-gate
+  on_rollback_unavailable: hard-gate
