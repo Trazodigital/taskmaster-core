@@ -6,7 +6,8 @@ sequenceDiagram
     participant TasksService
     participant JsonFileTaskRepository
 
-    Note over User,JsonFileTaskRepository: Feature - create a task from the CLI (refines architecture Flow 1)
+    Note over User,JsonFileTaskRepository: modules - app (composition root), cli, tasks, storage
+    Note over CLI,JsonFileTaskRepository: ports - command-input (owned by cli), task-repository (owned by tasks)
 
     User->>CLI: issues command (create task with title and optional due date)
     CLI->>ArgparseCommandInput: parse command arguments
