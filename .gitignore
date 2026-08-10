@@ -8,3 +8,11 @@ build/
 reports/
 *.gate.json
 .atl/
+
+# Python toolchain (declared in requirements-dev.txt, installed per machine)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/

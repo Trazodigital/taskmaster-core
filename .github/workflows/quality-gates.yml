@@ -31,8 +31,35 @@ jobs:
       - name: Install the YAML parser the verifiers use
         run: python3 -m pip install --quiet pyyaml
 
+      # USER_MANUAL.md § 5.3: the toolchain declared in tech-stack.yaml must be
+      # installed before any build-pipeline suite can resolve. Without this step
+      # every suites.* command below is a "command not found", which Phase 4
+      # (verification-suite-execution) would surface as a false failure.
+      - name: Install the project toolchain (tech-stack.yaml § toolchain)
+        run: python3 -m pip install --quiet -r requirements-dev.txt
+
       - name: Run Quality Framework gates
         run: bash scripts/local_dry_CI_run_before_commit.sh
+
+      # build-pipeline.yaml § suites declares lint / type-check / test-unit /
+      # test-integration / test-security as blocking on push and pull_request.
+      # The guard exists because the architecture track lands no source: with an
+      # empty src/, `pytest tests/` exits 5 (no tests collected) and would fail
+      # CI for the wrong reason. It disappears on its own the moment Phase 3
+      # commits the first module.
+      - name: Project suites (build-pipeline.yaml § suites)
+        run: |
+          if ! find src -type f -name '*.py' | grep -q .; then
+            echo "src/ holds no Python yet — build-pipeline suites skipped."
+            exit 0
+          fi
+          flake8 src/
+          # build-pipeline declares `python3 -m py_compile src/**/*.py`, which
+          # needs globstar (off by default in bash, absent in sh). compileall is
+          # the same check with a working recursive walk.
+          python3 -m compileall -q src/
+          pytest tests/ src/
+          bandit -r src/
 
       # Branch-name + commit-message gates, PR-aware. In CI the checked-out ref
       # is a detached merge commit, so these run off the PR's real head branch
