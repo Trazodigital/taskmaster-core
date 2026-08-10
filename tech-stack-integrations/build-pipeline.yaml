@@ -59,13 +59,17 @@ suites:
     artifacts: []
 
   test-unit:
-    command: "pytest tests/"                       # resolves toolchain.test_runner unit subset
+    # module-structure mandates tests co-located at src/<module>/tests/, and
+    # check-traceability.sh classifies any path with a tests/ segment as a test
+    # file. "pytest tests/" alone would never collect them, so both roots are
+    # listed here and in .github/workflows/quality-gates.yml.
+    command: "pytest tests/ src/"                       # resolves toolchain.test_runner unit subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml, coverage]
 
   test-integration:
-    command: "pytest tests/"                       # resolves toolchain.test_runner integration subset
+    command: "pytest tests/ src/"                       # resolves toolchain.test_runner integration subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
