@@ -5,18 +5,39 @@
   "description": "Validates tech-stack-integrations/build-pipeline.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tool", "suites", "artifacts", "branch_protection", "merge_policy", "deployment", "gate"],
+  "required": [
+    "tool",
+    "suites",
+    "artifacts",
+    "branch_protection",
+    "merge_policy",
+    "deployment",
+    "gate"
+  ],
   "properties": {
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "interaction_mode"],
+      "required": [
+        "name",
+        "interaction_mode"
+      ],
       "properties": {
-        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "name": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
         "interaction_mode": {
           "oneOf": [
-            { "enum": ["hosted-yaml", "cli", "rest-api"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "hosted-yaml",
+                "cli",
+                "rest-api"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         }
       }
@@ -27,59 +48,127 @@
       "properties": {
         "mode": {
           "oneOf": [
-            { "enum": ["none", "token", "oauth", "basic"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "none",
+                "token",
+                "oauth",
+                "basic"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
-        "credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "credential_key": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "suites": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "lint", "format-check", "type-check",
-        "test-unit", "test-integration", "test-security", "security-scan",
-        "test-e2e", "bench",
-        "traceability-gate", "glossary-gate", "nfr-fields-gate", "design-review-gate",
-        "design-review-gate-arch", "module-structure-gate",
-        "docs-build", "schema-validation"
+        "lint",
+        "format-check",
+        "type-check",
+        "test-unit",
+        "test-integration",
+        "test-security",
+        "security-scan",
+        "test-e2e",
+        "bench",
+        "traceability-gate",
+        "glossary-gate",
+        "nfr-fields-gate",
+        "design-review-gate",
+        "design-review-gate-arch",
+        "module-structure-gate",
+        "docs-build",
+        "schema-validation"
       ],
       "properties": {
-        "lint":                { "$ref": "#/$defs/placeholderSuite" },
-        "format-check":        { "$ref": "#/$defs/placeholderSuite" },
-        "type-check":          { "$ref": "#/$defs/placeholderSuite" },
-        "test-unit":           { "$ref": "#/$defs/placeholderSuite" },
-        "test-integration":    { "$ref": "#/$defs/placeholderSuite" },
-        "test-security":       { "$ref": "#/$defs/placeholderSuite" },
-        "security-scan":       { "$ref": "#/$defs/placeholderSuite" },
-        "test-e2e":            { "$ref": "#/$defs/placeholderSuite" },
-        "bench":               { "$ref": "#/$defs/placeholderSuite" },
-        "docs-build":          { "$ref": "#/$defs/placeholderSuite" },
-        "schema-validation":   { "$ref": "#/$defs/placeholderSuite" },
+        "lint": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "format-check": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "type-check": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "test-unit": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "test-integration": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "test-security": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "security-scan": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "test-e2e": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "bench": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "docs-build": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
+        "schema-validation": {
+          "$ref": "#/$defs/placeholderSuite"
+        },
         "traceability-gate": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-traceability.sh --phase verify --check-logging" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-traceability.sh --phase verify --check-logging"
+            }
+          }
         },
         "glossary-gate": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-glossary.sh" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-glossary.sh"
+            }
+          }
         },
         "nfr-fields-gate": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-nfr-fields.sh" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-nfr-fields.sh"
+            }
+          }
         },
         "design-review-gate": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-design-review.sh" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-design-review.sh"
+            }
+          }
         },
         "design-review-gate-arch": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-design-review.sh --scope architecture" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-design-review.sh --scope architecture"
+            }
+          }
         },
         "module-structure-gate": {
           "$ref": "#/$defs/scriptedSuite",
-          "properties": { "command": { "const": ".framework/scripts/check-module-structure.sh" } }
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-module-structure.sh"
+            }
+          }
         }
       }
     },
@@ -87,83 +176,141 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "lint-report", "junit-xml", "coverage", "sarif",
-        "benchmark-report", "heap-snapshot", "e2e-video",
-        "traceability-matrix", "docs-site"
+        "lint-report",
+        "junit-xml",
+        "coverage",
+        "sarif",
+        "benchmark-report",
+        "heap-snapshot",
+        "e2e-video",
+        "traceability-matrix",
+        "docs-site"
       ],
       "patternProperties": {
-        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/artifactSpec" }
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/artifactSpec"
+        }
       }
     },
     "branch_protection": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "protected_branches", "required_checks", "min_reviewers",
-        "require_codeowners_review", "require_linear_history",
-        "allow_force_push", "allow_deletion"
+        "protected_branches",
+        "required_checks",
+        "min_reviewers",
+        "require_codeowners_review",
+        "require_linear_history",
+        "allow_force_push",
+        "allow_deletion"
       ],
       "properties": {
         "protected_branches": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "required_checks": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "min_reviewers": { "type": "integer", "minimum": 1 },
-        "require_codeowners_review": { "const": true },
-        "require_linear_history": { "const": true },
-        "allow_force_push": { "const": false },
-        "allow_deletion": { "const": false }
+        "min_reviewers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "require_codeowners_review": {
+          "const": true
+        },
+        "require_linear_history": {
+          "const": true
+        },
+        "allow_force_push": {
+          "const": false
+        },
+        "allow_deletion": {
+          "const": false
+        }
       }
     },
     "merge_policy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["strategy", "require_pr_checklist"],
+      "required": [
+        "strategy",
+        "require_pr_checklist"
+      ],
       "properties": {
         "strategy": {
           "oneOf": [
-            { "enum": ["merge-commit", "squash", "rebase"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "merge-commit",
+                "squash",
+                "rebase"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
-        "require_pr_checklist": { "const": true }
+        "require_pr_checklist": {
+          "const": true
+        }
       }
     },
     "deployment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["staging", "production"],
+      "required": [
+        "staging",
+        "production"
+      ],
       "properties": {
         "staging": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["trigger", "requires_suites"],
+          "required": [
+            "trigger",
+            "requires_suites"
+          ],
           "properties": {
-            "trigger": { "$ref": "#/$defs/stringOrPlaceholder" },
+            "trigger": {
+              "$ref": "#/$defs/stringOrPlaceholder"
+            },
             "requires_suites": {
               "type": "array",
               "minItems": 1,
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
         "production": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["trigger", "requires_gates"],
+          "required": [
+            "trigger",
+            "requires_gates"
+          ],
           "properties": {
-            "trigger": { "$ref": "#/$defs/stringOrPlaceholder" },
+            "trigger": {
+              "$ref": "#/$defs/stringOrPlaceholder"
+            },
             "requires_gates": {
               "type": "array",
               "minItems": 1,
               "items": {
-                "enum": ["nfr-threshold-check", "po-acceptance"]
+                "enum": [
+                  "nfr-threshold-check",
+                  "po-acceptance"
+                ]
               },
               "uniqueItems": true
             }
@@ -175,17 +322,58 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "on_suite_failure", "on_missing_artifact",
-        "on_branch_protection_bypass", "on_missing_review",
-        "on_nfr_regression", "on_missing_po_approval"
+        "on_suite_failure",
+        "on_missing_artifact",
+        "on_branch_protection_bypass",
+        "on_missing_review",
+        "on_nfr_regression",
+        "on_missing_po_approval",
+        "on_review_failure",
+        "on_artifact_publish_failure",
+        "on_coverage_regression",
+        "on_acceptance_failure",
+        "on_rollback_unavailable",
+        "min_coverage_percent"
       ],
       "properties": {
-        "on_suite_failure": { "const": "hard-gate" },
-        "on_missing_artifact": { "const": "hard-gate" },
-        "on_branch_protection_bypass": { "const": "hard-gate" },
-        "on_missing_review": { "const": "hard-gate" },
-        "on_nfr_regression": { "const": "hard-gate" },
-        "on_missing_po_approval": { "const": "hard-gate" }
+        "on_suite_failure": {
+          "const": "hard-gate"
+        },
+        "on_missing_artifact": {
+          "const": "hard-gate"
+        },
+        "on_branch_protection_bypass": {
+          "const": "hard-gate"
+        },
+        "on_missing_review": {
+          "const": "hard-gate"
+        },
+        "on_nfr_regression": {
+          "const": "hard-gate"
+        },
+        "on_missing_po_approval": {
+          "const": "hard-gate"
+        },
+        "on_review_failure": {
+          "const": "hard-gate"
+        },
+        "on_artifact_publish_failure": {
+          "const": "hard-gate"
+        },
+        "on_coverage_regression": {
+          "const": "hard-gate"
+        },
+        "on_acceptance_failure": {
+          "const": "hard-gate"
+        },
+        "on_rollback_unavailable": {
+          "const": "hard-gate"
+        },
+        "min_coverage_percent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
       }
     }
   },
@@ -195,54 +383,101 @@
       "minLength": 1
     },
     "triggerEnum": {
-      "enum": ["push", "pr", "tag", "release-branch", "schedule", "manual"]
+      "enum": [
+        "push",
+        "pr",
+        "tag",
+        "release-branch",
+        "schedule",
+        "manual"
+      ]
     },
     "placeholderSuite": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command", "triggers", "blocking", "artifacts"],
+      "required": [
+        "command",
+        "triggers",
+        "blocking",
+        "artifacts"
+      ],
       "properties": {
-        "command": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "command": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
         "triggers": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/triggerEnum" }
+          "items": {
+            "$ref": "#/$defs/triggerEnum"
+          }
         },
-        "blocking": { "const": true },
+        "blocking": {
+          "const": true
+        },
         "artifacts": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
     "scriptedSuite": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command", "triggers", "blocking", "artifacts"],
+      "required": [
+        "command",
+        "triggers",
+        "blocking",
+        "artifacts"
+      ],
       "properties": {
-        "command": { "type": "string" },
+        "command": {
+          "type": "string"
+        },
         "triggers": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/triggerEnum" }
+          "items": {
+            "$ref": "#/$defs/triggerEnum"
+          }
         },
-        "blocking": { "const": true },
+        "blocking": {
+          "const": true
+        },
         "artifacts": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
     "artifactSpec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "retention"],
+      "required": [
+        "path",
+        "retention"
+      ],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
         "retention": {
           "oneOf": [
-            { "enum": ["per-release", "historical"] },
-            { "type": "string", "pattern": "^[0-9]+d$" }
+            {
+              "enum": [
+                "per-release",
+                "historical"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+d$"
+            }
           ]
         }
       }

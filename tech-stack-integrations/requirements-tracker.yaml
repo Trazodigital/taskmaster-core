@@ -69,9 +69,15 @@ markers:
 # Values under scripts/ are framework-fixed and MUST NOT be changed.
 
 commands:
-  validate_corpus: "scripts/check-traceability.sh"          # e.g. "strictdoc passthrough docs/requirements/"
+  # Both commands below need an explicit mode: check-traceability.sh exits 2
+  # with usage unless given --phase or --report. requirements-authoring invokes
+  # them verbatim (SKILL.md steps 4-5), so without a mode every REQ authored
+  # hard-gates. --phase spec is the authoring-time mode: it validates UID
+  # uniqueness and orphan markers without demanding the src/tests markers that
+  # only exist after Phase 3.
+  validate_corpus: "scripts/check-traceability.sh --phase spec"          # e.g. "strictdoc passthrough docs/requirements/"
   export_matrix: "scripts/check-traceability.sh --report"            # e.g. "strictdoc export --format=html docs/requirements/"
-  check_uniqueness: "scripts/check-traceability.sh"         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
+  check_uniqueness: "scripts/check-traceability.sh --phase spec"         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
   check_glossary: scripts/check-glossary.sh
   check_nfr_fields: scripts/check-nfr-fields.sh
   check_traceability: scripts/check-traceability.sh
