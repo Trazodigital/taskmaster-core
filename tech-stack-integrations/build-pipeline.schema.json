@@ -181,8 +181,6 @@
         "coverage",
         "sarif",
         "benchmark-report",
-        "heap-snapshot",
-        "e2e-video",
         "traceability-matrix",
         "docs-site"
       ],

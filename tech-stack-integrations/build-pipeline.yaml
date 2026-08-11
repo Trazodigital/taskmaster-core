@@ -158,8 +158,12 @@ artifacts:
   coverage:            { path: reports/coverage/,      retention: per-release }
   sarif:               { path: reports/security/,      retention: per-release }
   benchmark-report:    { path: reports/bench/,         retention: historical }
-  heap-snapshot:       { path: reports/heap/,          retention: per-release }
-  e2e-video:           { path: reports/e2e/,           retention: 30d }
+  # heap-snapshot and e2e-video were template placeholders with no producer in
+  # this stack: tech-stack.yaml declares a Python CLI, so there is no browser to
+  # record a session and no heap profiler in toolchain. Phase 4 requires every
+  # declared artifact to exist, so keeping them meant a permanent hard-gate on
+  # files nothing could write. Re-add them here and in build-pipeline.schema.json
+  # if a producing tool is ever adopted.
   traceability-matrix: { path: reports/traceability/,  retention: per-release }
   docs-site:           { path: reports/docs/,          retention: per-release }
 
