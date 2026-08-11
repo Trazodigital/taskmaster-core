@@ -10,6 +10,7 @@ Pure validation: no state is mutated and no port is called, so this REQ emits
 no runtime events and carries the structured-logging opt-out.
 
 @sdoc[REQ-FUNC-002]
+@sdoc[REQ-FUNC-007]
 @no-runtime-events[REQ-FUNC-002]
 """
 
@@ -25,6 +26,30 @@ class CreateTaskCommand:
     """A validated request to create a Task."""
 
     title: str
+
+
+@dataclass(frozen=True)
+class ListTasksCommand:
+    """A validated request to list every stored Task."""
+
+
+def parse_command(arguments):
+    """Turn raw CLI arguments into exactly one Command, or reject them.
+
+    @sdoc[REQ-FUNC-007]
+    """
+    if not arguments:
+        raise InvalidCommand("a command is required: create <title> | list")
+
+    name, *rest = arguments
+
+    if name == "list":
+        return ListTasksCommand()
+
+    if name == "create":
+        return parse_create_task(rest[0] if rest else None)
+
+    raise InvalidCommand(f"unknown command: {name}")
 
 
 def parse_create_task(title):
