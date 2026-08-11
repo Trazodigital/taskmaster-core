@@ -38,7 +38,7 @@ auth:
 suites:
 
   lint:
-    command: "flake8 src/"                       # resolves toolchain.linter from tech-stack.yaml
+    command: "mkdir -p reports/lint && flake8 src/ --tee --output-file=reports/lint/flake8.txt"                       # resolves toolchain.linter from tech-stack.yaml
     triggers: [push, pr]
     blocking: true
     artifacts: [lint-report]
@@ -63,25 +63,25 @@ suites:
     # check-traceability.sh classifies any path with a tests/ segment as a test
     # file. "pytest tests/" alone would never collect them, so both roots are
     # listed here and in .github/workflows/quality-gates.yml.
-    command: "pytest tests/ src/"                       # resolves toolchain.test_runner unit subset
+    command: "mkdir -p reports/junit reports/coverage && pytest tests/ src/ --junitxml=reports/junit/junit.xml --cov=src --cov-report=xml:reports/coverage/coverage.xml --cov-report=term"                       # resolves toolchain.test_runner unit subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml, coverage]
 
   test-integration:
-    command: "pytest tests/ src/"                       # resolves toolchain.test_runner integration subset
+    command: "mkdir -p reports/junit && pytest tests/ src/ --junitxml=reports/junit/integration.xml"                       # resolves toolchain.test_runner integration subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   test-security:
-    command: "bandit -r src/"                       # resolves toolchain.test_runner security subset
+    command: "mkdir -p reports/security && bandit -r src/ -f sarif -o reports/security/bandit.sarif"                       # resolves toolchain.test_runner security subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   security-scan:
-    command: "bandit -r src/"                       # resolves toolchain.security_scanner
+    command: "mkdir -p reports/security && bandit -r src/ -f sarif -o reports/security/bandit.sarif"                       # resolves toolchain.security_scanner
     triggers: [push, pr]
     blocking: true
     artifacts: [sarif]
@@ -93,13 +93,13 @@ suites:
     artifacts: [junit-xml, e2e-video]
 
   bench:
-    command: "pytest --benchmark-only"                       # resolves toolchain.benchmark_tool
+    command: "mkdir -p reports/bench && pytest --benchmark-only --benchmark-json=reports/bench/benchmark.json"                       # resolves toolchain.benchmark_tool
     triggers: [tag, release-branch]
     blocking: true
     artifacts: [benchmark-report, heap-snapshot]
 
   traceability-gate:
-    command: .framework/scripts/check-traceability.sh --phase verify --check-logging   # QF_ROOT env var must be set to the repo root
+    command: "mkdir -p reports/traceability && .framework/scripts/check-traceability.sh --report --report-out reports/traceability/matrix.md && .framework/scripts/check-traceability.sh --phase verify --check-logging"   # QF_ROOT env var must be set to the repo root
     triggers: [push, pr]
     blocking: true
     artifacts: [traceability-matrix]
@@ -135,7 +135,7 @@ suites:
     artifacts: []
 
   docs-build:
-    command: "python3 -m unittest"                       # e.g. mkdocs build --strict, strictdoc export
+    command: "mkdir -p reports/docs && cp -R docs/. reports/docs/"                       # e.g. mkdocs build --strict, strictdoc export
     triggers: [push, pr]
     blocking: true
     artifacts: [docs-site]
