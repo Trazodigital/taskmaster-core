@@ -1,0 +1,64 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant App
+    participant CLI
+    participant TasksService
+    participant JsonFileTaskRepository
+
+    Note over App,JsonFileTaskRepository: modules - app (composition root), cli, tasks, storage
+    Note over CLI,JsonFileTaskRepository: ports - command-input (owned by cli), task-repository (owned by tasks)
+
+    Note over User,JsonFileTaskRepository: Startup - app is the only site that constructs adapters
+
+    User->>App: runs the taskmaster command
+    App->>JsonFileTaskRepository: construct with the store path
+    JsonFileTaskRepository-->>App: task-repository implementation
+    App->>CLI: hand over the wired command-input and task-repository
+    CLI-->>App: ready to accept a command
+
+    Note over User,JsonFileTaskRepository: Durable create - whole-file read then whole-file write
+
+    User->>CLI: issues command (create task with title)
+    CLI->>TasksService: create task
+    TasksService->>JsonFileTaskRepository: persist task
+
+    alt store file absent
+        JsonFileTaskRepository->>JsonFileTaskRepository: treat first run as an empty store
+    else store file present
+        JsonFileTaskRepository->>JsonFileTaskRepository: read the whole store file
+
+        alt stored content is not valid json
+            JsonFileTaskRepository-->>TasksService: storage error (corrupt store)
+            TasksService-->>CLI: creation failed
+            CLI-->>User: explicit error message
+            Note over JsonFileTaskRepository: a corrupt store is never overwritten
+        end
+    end
+
+    JsonFileTaskRepository->>JsonFileTaskRepository: append the task and assign its identifier
+
+    alt write succeeds
+        JsonFileTaskRepository->>JsonFileTaskRepository: replace the store file atomically
+        JsonFileTaskRepository-->>TasksService: persisted task id
+        TasksService-->>CLI: created task
+        CLI-->>User: confirmation with task id
+    else write fails
+        JsonFileTaskRepository-->>TasksService: storage error (write failed)
+        TasksService-->>CLI: creation failed
+        CLI-->>User: explicit error message
+    end
+
+    Note over TasksService,JsonFileTaskRepository: write timeout 5s and no retry, per REQ-ARCH-022
+
+    Note over User,JsonFileTaskRepository: Durability - a task created in one run is present in the next
+
+    User->>App: runs the taskmaster command again
+    App->>JsonFileTaskRepository: construct with the same store path
+    JsonFileTaskRepository-->>App: task-repository implementation
+    User->>CLI: issues command (list tasks)
+    CLI->>TasksService: list tasks
+    TasksService->>JsonFileTaskRepository: load tasks
+    JsonFileTaskRepository-->>TasksService: tasks stored by the previous run
+    TasksService-->>CLI: task list
+    CLI-->>User: rendered task list
