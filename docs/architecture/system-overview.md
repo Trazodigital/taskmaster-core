@@ -43,6 +43,11 @@ frame every subsequent `/sdd-new` feature builds on.
 - REQ-ARCH-027
 - REQ-ARCH-028
 - REQ-ARCH-029
+- REQ-ARCH-030
+- REQ-ARCH-031
+- REQ-ARCH-032
+- REQ-ARCH-033
+- REQ-ARCH-034
 - REQ-NFR-PERF-001
 - REQ-NFR-PERF-002
 - REQ-NFR-SEC-001
@@ -53,7 +58,7 @@ frame every subsequent `/sdd-new` feature builds on.
 - **cli** — translates a Command from the User into exactly one task or space operation and renders the result.
 - **scheduler** — emits a due-date check tick on an interval so Due Date evaluation runs independently of any Command.
 - **tasks** — owns Task lifecycle and decides whether a Task is an Overdue Task.
-- **spaces** — owns Space membership and the assignment of a Task to a Space.
+- **spaces** — owns Space creation, Space membership, and the assignment of a Task to a Space.
 - **notifications** — turns a reported Overdue Task into exactly one Reminder addressed to the User.
 - **storage** — satisfies the repository ports with durable persistence of Tasks and Spaces.
 
@@ -82,6 +87,7 @@ frame every subsequent `/sdd-new` feature builds on.
 
 - Create a Task: cli → tasks (via command-input) → storage (via task-repository); the persisted identifier returns, or a storage error surfaces to the User as an explicit failure.
 - List Tasks: cli → tasks (via command-input) → storage (via task-repository); an empty store returns an empty Task List, never an error.
+- Create a Space: cli → spaces (via command-input) → storage (via space-repository) to verify the name is free, then storage (via space-repository) for the write; a name already taken stops before any write and surfaces as an explicit error.
 - Assign a Task to a Space: cli → spaces (via command-input) → storage (via space-repository) for existence verification, then storage (via space-repository) for the write; a missing Space stops before any write.
 - Due-date sweep: scheduler → tasks (via clock) → storage (via task-repository) → notifications, then notifications → User (via reminder-sender); both hops are fire-and-forget and the tick is acknowledged regardless of delivery outcome.
 
@@ -109,6 +115,7 @@ flowchart LR
     User -->|"issues command"| CLI
     CLI -->|"create task"| TasksService
     CLI -->|"list tasks"| TasksService
+    CLI -->|"create space"| SpacesService
     CLI -->|"assign task to space"| SpacesService
     TasksService -->|"persist task"| StorageService
     TasksService -->|"load tasks"| StorageService
@@ -175,6 +182,7 @@ sequenceDiagram
         SpacesService-->>CLI: unknown space
         CLI-->>User: error message
     end
+    Note over SpacesService,StorageService: write timeout 5s, no retry
 
     Note over Scheduler,User: Flow 4 - due-date reminder
     Scheduler->>TasksService: due-date check tick
@@ -187,6 +195,29 @@ sequenceDiagram
         Note right of User: fire-and-forget, delivery not confirmed
     end
     TasksService-->>Scheduler: check completed
+
+    Note over User,StorageService: Flow 5 - create space
+    User->>CLI: issues command (create space)
+    CLI->>SpacesService: create space
+    SpacesService->>StorageService: load spaces
+    StorageService-->>SpacesService: stored spaces
+    alt space name already taken
+        SpacesService-->>CLI: duplicate space
+        CLI-->>User: error message
+        Note over SpacesService,StorageService: no persist space write is issued
+    else space name available
+        SpacesService->>StorageService: persist space
+        alt persisted
+            StorageService-->>SpacesService: persisted space id
+            SpacesService-->>CLI: created space
+            CLI-->>User: confirmation
+        else storage unavailable
+            StorageService-->>SpacesService: storage error
+            SpacesService-->>CLI: creation failed
+            CLI-->>User: error message
+        end
+    end
+    Note over SpacesService,StorageService: write timeout 5s, no retry
 ```
 
 Design-level ports-and-adapters view. This block is authored here and is NOT a

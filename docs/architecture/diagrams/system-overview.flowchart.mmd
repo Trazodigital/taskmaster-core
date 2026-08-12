@@ -15,6 +15,7 @@ flowchart LR
     User -->|"issues command"| CLI
     CLI -->|"create task"| TasksService
     CLI -->|"list tasks"| TasksService
+    CLI -->|"create space"| SpacesService
     CLI -->|"assign task to space"| SpacesService
     TasksService -->|"persist task"| StorageService
     TasksService -->|"load tasks"| StorageService

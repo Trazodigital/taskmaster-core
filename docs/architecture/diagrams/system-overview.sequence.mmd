@@ -50,6 +50,7 @@ sequenceDiagram
         SpacesService-->>CLI: unknown space
         CLI-->>User: error message
     end
+    Note over SpacesService,StorageService: write timeout 5s, no retry
 
     Note over Scheduler,User: Flow 4 - due-date reminder
     Scheduler->>TasksService: due-date check tick
@@ -62,3 +63,26 @@ sequenceDiagram
         Note right of User: fire-and-forget, delivery not confirmed
     end
     TasksService-->>Scheduler: check completed
+
+    Note over User,StorageService: Flow 5 - create space
+    User->>CLI: issues command (create space)
+    CLI->>SpacesService: create space
+    SpacesService->>StorageService: load spaces
+    StorageService-->>SpacesService: stored spaces
+    alt space name already taken
+        SpacesService-->>CLI: duplicate space
+        CLI-->>User: error message
+        Note over SpacesService,StorageService: no persist space write is issued
+    else space name available
+        SpacesService->>StorageService: persist space
+        alt persisted
+            StorageService-->>SpacesService: persisted space id
+            SpacesService-->>CLI: created space
+            CLI-->>User: confirmation
+        else storage unavailable
+            StorageService-->>SpacesService: storage error
+            SpacesService-->>CLI: creation failed
+            CLI-->>User: error message
+        end
+    end
+    Note over SpacesService,StorageService: write timeout 5s, no retry

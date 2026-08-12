@@ -3,7 +3,7 @@
 **TYPE:** ARCH
 **ORIGIN:** flowchart node: spaces
 
-**STATEMENT:** The system SHALL provide a `spaces` block responsible for Space membership and assignment of a Task to a Space.
+**STATEMENT:** The system SHALL provide a `spaces` block responsible for Space creation, Space membership, and assignment of a Task to a Space.
 
 **ACCEPTANCE_CRITERIA:**
 
