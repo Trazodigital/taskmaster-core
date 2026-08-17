@@ -1,5 +1,6 @@
 """
 @sdoc[REQ-FUNC-001]
+@sdoc[REQ-FUNC-002]
 """
 
 import json
@@ -61,3 +62,47 @@ def test_add_task_emits_error_event_on_external_change(caplog):
 
     events = [json.loads(r.message) for r in caplog.records]
     assert [e["event_type"] for e in events] == ["start", "error"]
+
+
+def test_toggle_task_flips_done_and_saves_through_the_repository():
+    """@sdoc[REQ-FUNC-002]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread")
+
+    state.toggle_task(0)
+
+    assert state.tasks[0].done is True
+    assert repo.load().tasks[0].done is True
+
+
+def test_toggle_task_reports_external_change_and_keeps_the_flip_visible():
+    """@sdoc[REQ-FUNC-002]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread")
+    # someone else re-saves the store after this state's last load, bumping
+    # the fingerprint state still holds a stale copy of
+    current = repo.load()
+    repo.save(current.tasks, fingerprint=current.fingerprint)
+
+    outcome = state.toggle_task(0)
+
+    assert outcome.external_change is True
+    assert state.tasks[0].done is True
+
+
+def test_toggle_task_emits_start_and_end_log_events(caplog):
+    """@sdoc[REQ-FUNC-002]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread")
+    caplog.clear()  # drop the add_task events from setup above
+
+    with caplog.at_level(logging.INFO, logger="ui.state"):
+        state.toggle_task(0)
+
+    events = [json.loads(r.message) for r in caplog.records]
+    assert [e["event_type"] for e in events] == ["start", "end"]
+    for e in events:
+        assert e["req_uid"] == "REQ-FUNC-002"

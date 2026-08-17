@@ -1,0 +1,16 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    participant port as TaskRepository
+    end
+
+    user->>app: toggle key, on the selected task
+    app->>model: flip done on that task record
+    model-->>app: the updated task record
+    app->>port: save request with the full task list and the held fingerprint
+    port-->>app: save outcome, either confirmed with a new fingerprint or an external change
+    app-->>user: the updated list, or a report that nothing was written
