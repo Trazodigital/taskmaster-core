@@ -4,6 +4,7 @@
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
+@sdoc[REQ-FUNC-009]
 """
 
 from dataclasses import dataclass, replace
@@ -93,6 +94,11 @@ def due_this_week(tasks: list[Task], today: date) -> list[Task]:
     ]
 
 
+def is_overdue(task: Task, today: date) -> bool:
+    """@sdoc[REQ-FUNC-009]"""
+    return not task.done and task.due_date is not None and task.due_date < today
+
+
 def overdue(tasks: list[Task], today: date) -> list[Task]:
     """@sdoc[REQ-FUNC-005]"""
-    return [t for t in tasks if not t.done and t.due_date and t.due_date < today]
+    return [t for t in tasks if is_overdue(t, today)]

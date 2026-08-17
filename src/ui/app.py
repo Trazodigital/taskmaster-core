@@ -4,6 +4,7 @@
 @sdoc[REQ-FUNC-006]
 @sdoc[REQ-FUNC-007]
 @sdoc[REQ-FUNC-008]
+@sdoc[REQ-FUNC-009]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
@@ -18,6 +19,7 @@ from textual.screen import Screen
 from textual.widgets import Input, ListView, ListItem, Label, Static
 
 from storage.json_repository import JsonFileRepository
+from tasks.model import is_overdue
 from tasks.repository import TaskRepository
 from ui.state import TaskmasterState
 
@@ -99,6 +101,12 @@ class TaskmasterApp(App):
         ("v", "cycle_date_view", "Cycle date view"),
         ("?", "show_help", "Show help"),
     ]
+
+    CSS = """
+    .task-overdue { color: red; }
+    .task-done { color: green; }
+    .task-in-progress { color: cyan; }
+    """
 
     def __init__(
         self,
@@ -214,6 +222,7 @@ class TaskmasterApp(App):
             f"space: {space} | view: {date_view}"
         )
 
+        today = date.today()
         task_list = self.query_one("#task-list", ListView)
         task_list.clear()
         for task in self.state.visible_tasks:
@@ -221,7 +230,14 @@ class TaskmasterApp(App):
             # markup=False: task text is arbitrary user input, never
             # interpreted as Rich markup — REQ-ARCH-018's untrusted-input
             # posture applies here too, not just to the stored JSON.
-            task_list.append(ListItem(Label(f"[{mark}] {task.text}", markup=False)))
+            label = Label(f"[{mark}] {task.text}", markup=False)
+            if task.done:
+                label.add_class("task-done")
+            elif is_overdue(task, today):
+                label.add_class("task-overdue")
+            else:
+                label.add_class("task-in-progress")
+            task_list.append(ListItem(label))
         # ListView.clear() drops the selection; without re-selecting, toggle
         # and delete are unreachable until the user manually presses an
         # arrow key first — same reachability defect as the focus bug above.

@@ -1,0 +1,13 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    user->>app: any change that re-renders the task list
+    app->>model: is each visible task overdue, given the current date
+    model-->>app: true or false, per task
+    app->>app: color the task red if overdue, green if done, otherwise the in-progress color
