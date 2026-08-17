@@ -1,6 +1,7 @@
 """
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-002]
+@sdoc[REQ-FUNC-003]
 """
 
 import logging
@@ -25,6 +26,14 @@ def test_app_binds_the_toggle_key():
 
     bindings = app._bindings.get_bindings_for_key("space")
     assert [b.action for b in bindings] == ["toggle_task"]
+
+
+def test_app_binds_the_delete_key():
+    """@sdoc[REQ-FUNC-003]"""
+    app = TaskmasterApp(repository=InMemoryRepository())
+
+    bindings = app._bindings.get_bindings_for_key("d")
+    assert [b.action for b in bindings] == ["delete_task"]
 
 
 def test_task_line_renders_bracket_text_literally_not_as_markup():

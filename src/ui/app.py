@@ -27,6 +27,7 @@ class TaskmasterApp(App):
     BINDINGS = [
         ("a", "add_task", "Add task"),
         ("space", "toggle_task", "Toggle done"),
+        ("d", "delete_task", "Delete task"),
     ]
 
     def __init__(
@@ -73,11 +74,18 @@ class TaskmasterApp(App):
 
     def action_toggle_task(self) -> None:
         """@sdoc[REQ-FUNC-002]"""
+        self._act_on_selected(self.state.toggle_task)
+
+    def action_delete_task(self) -> None:
+        """@sdoc[REQ-FUNC-003]"""
+        self._act_on_selected(self.state.delete_task)
+
+    def _act_on_selected(self, action) -> None:
         task_list = self.query_one("#task-list", ListView)
         index = task_list.index
         if index is None:
             return
-        self.state.toggle_task(index)
+        action(index)
         self._refresh_list()
 
     def _refresh_list(self) -> None:
