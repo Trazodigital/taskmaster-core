@@ -1,0 +1,14 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+
+    Note over app: two tasks are visible; the user has selected the second one
+
+    user->>app: space, to toggle the selected task
+    app->>app: toggle the second task, then clear and rebuild the list
+    app->>app: selection was lost by clear(), so it resets to the first task instead of staying on the second
+
+    user->>app: space again, expecting to toggle the second task back off
+    app->>app: toggles the first task instead — the wrong one
