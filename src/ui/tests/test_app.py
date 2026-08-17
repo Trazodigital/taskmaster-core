@@ -6,12 +6,24 @@
 @sdoc[REQ-FUNC-005]
 """
 
+import asyncio
 import logging
 
-from textual.widgets import Label
+from textual.widgets import Input, ListView, Label
 
 from storage.in_memory_repository import InMemoryRepository
 from ui.app import TaskmasterApp
+
+
+def run(coro):
+    """Drive an async Pilot flow from a plain sync test.
+
+    No pytest-asyncio dependency: this function owns the event loop itself
+    rather than asking pytest to run an async test function.
+
+    @sdoc[REQ-FUNC-001]
+    """
+    return asyncio.run(coro)
 
 
 def test_app_binds_the_add_key():
@@ -71,6 +83,79 @@ def test_app_wires_its_state_to_the_injected_repository():
     app = TaskmasterApp(repository=repo)
 
     assert app.state.tasks == []
+
+
+def test_task_list_holds_focus_on_start_not_the_input():
+    """@sdoc[REQ-FUNC-001]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test():
+            return app.focused
+
+    focused = run(scenario())
+    assert isinstance(focused, ListView)
+
+
+def test_pressing_a_key_focuses_the_input_without_creating_a_task():
+    """@sdoc[REQ-FUNC-001]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("a")
+            return app.focused, app.state.tasks
+
+    focused, tasks = run(scenario())
+    assert isinstance(focused, Input)
+    assert tasks == []
+
+
+def test_typing_then_enter_creates_the_task_and_returns_focus_to_the_list():
+    """@sdoc[REQ-FUNC-001]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("a")
+            for ch in "buy bread":
+                await pilot.press(ch if ch != " " else "space")
+            await pilot.press("enter")
+            return app.focused, [t.text for t in app.state.tasks]
+
+    focused, texts = run(scenario())
+    assert isinstance(focused, ListView)
+    assert texts == ["buy bread"]
+
+
+def test_adding_a_task_leaves_it_selected_so_toggle_works_immediately():
+    """@sdoc[REQ-FUNC-001]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("a")
+            for ch in "buy bread":
+                await pilot.press(ch if ch != " " else "space")
+            await pilot.press("enter")
+            await pilot.press("space")  # toggle, with no manual selection
+            return app.state.tasks[0].done
+
+    assert run(scenario()) is True
+
+
+def test_toggle_key_reaches_the_app_while_the_list_holds_focus():
+    """@sdoc[REQ-FUNC-002]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("buy bread")
+        async with app.run_test() as pilot:
+            app.query_one(ListView).index = 0
+            await pilot.press("space")
+            return app.state.tasks[0].done
+
+    assert run(scenario()) is True
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):
