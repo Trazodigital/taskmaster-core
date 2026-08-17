@@ -1,0 +1,15 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+
+    user->>app: launch the application
+    app->>app: show the welcome screen with the banner and the key-bindings guide
+    user->>app: press any key
+    app->>app: dismiss the welcome screen and show the task list
+
+    user->>app: press the "?" key
+    app->>app: show the welcome screen again
+    user->>app: press any key
+    app->>app: dismiss the welcome screen and return to the task list

@@ -5,16 +5,17 @@
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
+@sdoc[REQ-FUNC-007]
 """
 
 import asyncio
 import logging
 from datetime import date, timedelta
 
-from textual.widgets import Input, ListView, Label
+from textual.widgets import Input, ListView, Label, Static
 
 from storage.in_memory_repository import InMemoryRepository
-from ui.app import TaskmasterApp
+from ui.app import TaskmasterApp, WelcomeScreen
 
 
 def run(coro):
@@ -87,12 +88,80 @@ def test_app_wires_its_state_to_the_injected_repository():
     assert app.state.tasks == []
 
 
-def test_task_list_holds_focus_on_start_not_the_input():
-    """@sdoc[REQ-FUNC-001]"""
+def test_app_shows_the_welcome_screen_before_the_task_list_on_launch():
+    """@sdoc[REQ-FUNC-007]"""
 
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test():
+            return app.screen
+
+    assert isinstance(run(scenario()), WelcomeScreen)
+
+
+def test_the_welcome_screen_shows_the_banner_and_the_key_bindings_guide():
+    """@sdoc[REQ-FUNC-007]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test():
+            screen = app.screen
+            return "\n".join(str(w.render()) for w in screen.query(Static))
+
+    text = run(scenario())
+    assert ".·:" in text  # the banner's frame
+    assert "add a task" in text
+    assert "toggle done" in text
+
+
+def test_pressing_any_key_dismisses_the_welcome_screen_and_shows_the_task_list():
+    """@sdoc[REQ-FUNC-007]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")
+            return app.screen
+
+    assert not isinstance(run(scenario()), WelcomeScreen)
+
+
+def test_pressing_question_mark_shows_the_welcome_screen_again():
+    """@sdoc[REQ-FUNC-007]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the initial welcome screen
+            await pilot.press("?")
+            return app.screen
+
+    assert isinstance(run(scenario()), WelcomeScreen)
+
+
+def test_pressing_any_key_dismisses_the_reopened_welcome_screen_too():
+    """@sdoc[REQ-FUNC-007]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")
+            await pilot.press("?")
+            await pilot.press("escape")
+            return app.screen
+
+    assert not isinstance(run(scenario()), WelcomeScreen)
+
+
+def test_task_list_holds_focus_once_the_welcome_screen_is_dismissed():
+    """@sdoc[REQ-FUNC-001]
+    @sdoc[REQ-FUNC-007]
+    """
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             return app.focused
 
     focused = run(scenario())
@@ -105,6 +174,7 @@ def test_pressing_a_key_focuses_the_input_without_creating_a_task():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             await pilot.press("a")
             return app.focused, app.state.tasks
 
@@ -119,6 +189,7 @@ def test_typing_then_enter_creates_the_task_and_returns_focus_to_the_list():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             await pilot.press("a")
             for ch in "buy bread":
                 await pilot.press(ch if ch != " " else "space")
@@ -136,6 +207,7 @@ def test_adding_a_task_leaves_it_selected_so_toggle_works_immediately():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             await pilot.press("a")
             for ch in "buy bread":
                 await pilot.press(ch if ch != " " else "space")
@@ -153,6 +225,7 @@ def test_toggle_key_reaches_the_app_while_the_list_holds_focus():
         app = TaskmasterApp(repository=InMemoryRepository())
         app.state.add_task("buy bread")
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             app.query_one(ListView).index = 0
             await pilot.press("space")
             return app.state.tasks[0].done
@@ -165,7 +238,8 @@ def test_date_field_is_prefilled_with_todays_date():
 
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
-        async with app.run_test():
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             return app.query_one("#date-input", Input).value
 
     assert run(scenario()) == date.today().isoformat()
@@ -177,6 +251,7 @@ def test_up_on_the_date_field_advances_it_by_one_day():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             app.query_one("#date-input", Input).focus()
             await pilot.press("up")
             return app.query_one("#date-input", Input).value
@@ -191,6 +266,7 @@ def test_down_on_the_date_field_retreats_it_by_one_day():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             app.query_one("#date-input", Input).focus()
             await pilot.press("down")
             return app.query_one("#date-input", Input).value
@@ -205,6 +281,7 @@ def test_submitting_the_form_creates_a_task_with_the_space_and_date_fields():
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             app.query_one("#task-input", Input).value = "buy bread"
             app.query_one("#space-input", Input).value = "home"
             app.query_one("#date-input", Input).value = "2026-08-20"
@@ -224,6 +301,7 @@ def test_submitting_the_form_clears_text_and_space_and_resets_the_date_to_today(
     async def scenario():
         app = TaskmasterApp(repository=InMemoryRepository())
         async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
             app.query_one("#task-input", Input).value = "buy bread"
             app.query_one("#space-input", Input).value = "home"
             app.query_one("#date-input", Input).value = "2026-08-20"
