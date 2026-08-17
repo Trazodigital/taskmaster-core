@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    Note over app: on start, the task list holds focus, not the text input
+
+    user->>app: add key
+    app-->>user: the text input gains focus
+
+    user->>app: task text, then enter
+    app->>model: new task from the entered text
+    model-->>app: a task record marked not done
+    app->>app: focus returns to the task list
+    app-->>user: the new task in the list

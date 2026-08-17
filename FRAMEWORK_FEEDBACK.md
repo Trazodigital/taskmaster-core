@@ -120,6 +120,97 @@ proposal that was never run should say so.
 
 <!-- Newest first. -->
 
+### FB-010 — `check-traceability.sh --check-logging` is flaky: identical, unchanged state produces different pass/fail results across consecutive runs
+
+- **Date:** 2026-08-17
+- **Framework version:** v3.0.0 @ 978cd9e83ed4b3ebffae06b5ccedd393b39528f2
+- **Severity:** critical
+- **Class:** C1
+- **Status:** open
+
+**What the framework claims**
+
+Every gate in this framework is documented as deterministic given fixed input — `AGENTS.md`'s
+standing rules and every skill's "Hard-gate" language describe a check that either passes or fails
+based on the state of the repository, never on chance. `verification-suite-execution/SKILL.md:9`
+("Deliberately stateless: no caches, no shortcuts... every invocation MUST be reproducible") states
+this explicitly for the suite this gate is part of.
+
+**What actually happens**
+
+`check-traceability.sh --phase verify --check-logging`, invoked identically five times in a row
+against a completely unchanged working tree (no edits, no `pytest` run in between, `__pycache__`
+confirmed absent before each run — ruling out FB-007), returned three different results:
+
+```
+run 1: REQ-FUNC-002 fails (missing: correlation_id); REQ-FUNC-005 fails (missing: req_uid)
+run 2: neither fails
+run 3: REQ-FUNC-002 fails (missing: correlation_id); REQ-FUNC-005 fails (missing: correlation_id)
+run 4: neither fails
+run 5: neither fails
+```
+
+**Reproduction**
+
+```bash
+find src -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+for i in 1 2 3 4 5; do
+  QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging 2>&1 \
+    | grep "REQ-FUNC-002\|REQ-FUNC-005" || echo "(neither flagged)"
+done
+# no file changes between iterations; results still differ
+```
+
+**Verification**
+
+RUN, five consecutive times, on this product's `bugfix/REQ-FUNC-001-keyboard-focus` branch. The
+core logic was isolated and re-run separately to localize the fault: `test_files_for()` and the
+content-aggregation step (extracted verbatim from `scripts/check-traceability.sh:962-975` into a
+standalone script) returned an **identical** file set and an **identical** content length
+(18358 bytes) across five runs, and a direct check for all six required tokens
+(`start`/`end`/`error`/`event_type`/`req_uid`/`correlation_id`) found every one, every time. This
+rules out `test_files_for` and the content-search logic themselves as the source — the fault is
+upstream, in `check-traceability.sh`'s broader per-run computation (candidates: `REQ_UIDS`,
+`SRC_MARKERS`, or the `exempt_uids`/`obs_list` calls that shell out to `yq` or `python3` once per
+invocation), not investigated further since modifying the framework script is out of scope for a
+product-side session.
+
+**Blast radius**
+
+Every product on this framework, every time `--check-logging` runs — which is every `push`/`pr` on
+a non-`arch/*` branch, per `build-pipeline.yaml § suites.test-integration`
+(`check-traceability.sh --phase verify --check-logging` is wired into the default verify path). A
+flaky hard-gate is worse than a deterministically-wrong one: it can pass a genuinely broken
+changeset as easily as it can fail a correct one, and a re-run "fixing" a red CI result gives false
+confidence that whatever changed between runs mattered, when nothing did.
+
+**Impact on this product**
+
+Discovered mid-Phase-4 on the keyboard-focus bugfix, investigated rather than dismissed as another
+instance of the already-known FB-007. No merge was blocked by it — this product has no required
+status checks configured (FB-005), so a locally-observed flake does not gate anything — but it means
+every PR's Phase 4 report from this point forward must be read knowing a red `REQ-FUNC-*` result
+needs a second, isolated look before being trusted as real, the same discipline already applied to
+rule out FB-007 contamination.
+
+**Workaround applied**
+
+`none`. Re-running the check until it reports green would be exactly the kind of silent tolerance
+the framework's own "hard gates, not warnings" rule forbids — a flaky gate that eventually says yes
+is not evidence of correctness, it is evidence the gate cannot be trusted at all.
+
+**Proposed fix** *(optional)*
+
+Not tested; not diagnosed far enough to propose a specific patch — the isolated reproduction above
+narrows the fault to "somewhere in `check-traceability.sh` outside `test_files_for` and the
+content-search loop," which is as far as a product-side investigation can responsibly go without
+editing the framework's own script. The next diagnostic step, for whoever owns the framework repo:
+instrument `REQ_UIDS`, `SRC_MARKERS`, and the `obs_list`/`scan_optout` outputs with a checksum
+printed to stderr on each of several consecutive runs against unchanged state, to find which one
+varies.
+
+---
+
 ### FB-009 — `declared_names_in()` reads the first word of every prose line in MODULES/PORTS as a declared name, and `design-artifacts`' claimed "empty section" hard-gate is not enforced by the script
 
 - **Date:** 2026-08-17

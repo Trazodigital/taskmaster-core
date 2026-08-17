@@ -64,16 +64,29 @@ class TaskmasterApp(App):
 
     def on_mount(self) -> None:
         self._refresh_list()
+        # the list holds focus, not the input — otherwise every single-key
+        # binding below (toggle/delete/cycle-*) is typed into the input as a
+        # literal character instead of ever reaching these actions
+        self.query_one("#task-list", ListView).focus()
 
     def action_add_task(self) -> None:
+        """@sdoc[REQ-FUNC-001]
+
+        Only focuses the input; creating the task happens on Submitted
+        (Enter), in `on_input_submitted`. Reading the input's value here
+        would be moot anyway — while the input holds focus, the single
+        letter "a" never reaches this action, it is typed into the input.
+        """
+        self.query_one("#task-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
         """@sdoc[REQ-FUNC-001]"""
-        field = self.query_one("#task-input", Input)
-        text = field.value
-        if not text:
-            return
-        self.state.add_task(text)
-        field.value = ""
-        self._refresh_list()
+        text = event.value
+        if text:
+            self.state.add_task(text)
+            event.input.value = ""
+            self._refresh_list()
+        self.query_one("#task-list", ListView).focus()
 
     def action_toggle_task(self) -> None:
         """@sdoc[REQ-FUNC-002]"""
@@ -102,6 +115,7 @@ class TaskmasterApp(App):
         self._refresh_list()
 
     def _refresh_list(self) -> None:
+        """@sdoc[REQ-FUNC-001]"""
         task_list = self.query_one("#task-list", ListView)
         task_list.clear()
         for task in self.state.visible_tasks:
@@ -110,3 +124,8 @@ class TaskmasterApp(App):
             # interpreted as Rich markup — REQ-ARCH-018's untrusted-input
             # posture applies here too, not just to the stored JSON.
             task_list.append(ListItem(Label(f"[{mark}] {task.text}", markup=False)))
+        # ListView.clear() drops the selection; without re-selecting, toggle
+        # and delete are unreachable until the user manually presses an
+        # arrow key first — same reachability defect as the focus bug above.
+        if task_list.index is None and len(task_list) > 0:
+            task_list.index = 0
