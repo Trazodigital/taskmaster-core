@@ -320,7 +320,7 @@ branch_protection:
     mechanism: "manual-process"             # host-native | manual-process | none
     verified_by: ""           # required for host-native; exits 0 when live protection matches
                                          # e.g. gh api "repos/{owner}/{repo}/branches/main/protection" >/dev/null
-    unenforceable_reason: "GitHub enforces the CODEOWNERS review on main (require_code_owner_reviews=true, 1 approval) but no required status checks are configured. The quality-gates workflow publishes ONE check, so the suite names in required_checks cannot map to GitHub status checks as declared; they are enforced inside that job by scripts/local_dry_CI_run_before_commit.sh, not by the host."  # required unless host-native
+    unenforceable_reason: "Single available maintainer. The repository declares 1 approving review with CODEOWNERS on main, but GitHub does not allow a PR author to approve their own PR, and the only other owner is not available to review. enforce_admins was set to false on 2026-08-16 so the sole maintainer can land work, and CODEOWNERS now lists that maintainer alone; the review requirement itself is left declared, not deleted, so restoring four-eyes is one flag plus one line. Every admin bypass is recorded by GitHub. Separately, no required status checks are configured: the quality-gates workflow publishes ONE check, so the suite names in required_checks cannot map to GitHub status checks as declared; they are enforced inside that job by scripts/local_dry_CI_run_before_commit.sh."  # required unless host-native
 
 # ─── 6. Merge policy ──────────────────────────────────────────────────────────
 
