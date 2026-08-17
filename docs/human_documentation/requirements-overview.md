@@ -81,9 +81,17 @@ Source: `docs/requirements/toggle-task.md`
 |---|---|---|
 | REQ-FUNC-002 | invariant ? | The user SHALL be able to flip an existing task's done state through taskmaster-app and have the change persisted through TaskRepository. |
 
+## Welcome-screen feature requirements
+
+Source: `docs/requirements/welcome-screen.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-007 | invariant ? | The application SHALL show a welcome screen carrying the ASCII banner and a static list of its key bindings before the task list on launch, dismissed by any keypress, and SHALL show it again on demand when the user presses the "?" key. |
+
 ---
 
-28 requirement(s). `Derived from`: 21 declared, 7 inferred (marked `?`), 0 undetermined.
+29 requirement(s). `Derived from`: 21 declared, 8 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

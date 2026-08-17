@@ -2,6 +2,7 @@
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
+@sdoc[REQ-FUNC-007]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
@@ -10,8 +11,10 @@ import logging
 from datetime import date, timedelta
 from pathlib import Path
 
+from textual import events
 from textual.app import App, ComposeResult
-from textual.widgets import Input, ListView, ListItem, Label
+from textual.screen import Screen
+from textual.widgets import Input, ListView, ListItem, Label, Static
 
 from storage.json_repository import JsonFileRepository
 from tasks.repository import TaskRepository
@@ -19,6 +22,33 @@ from ui.state import TaskmasterState
 
 DEFAULT_STORE_PATH = Path.home() / ".local" / "share" / "taskmaster" / "tasks.json"
 DEFAULT_LOG_PATH = Path.home() / ".local" / "share" / "taskmaster" / "taskmaster.log"
+
+WELCOME_BANNER = r"""
+.·:''''''''''''''''''''''''''''''''''''''''''''''''''''''':·.
+: :  _______  _______  _______  __  __                    : :
+: : |_     _||   _   ||     __||  |/  |                   : :
+: :   |   |  |       ||__     ||     <                    : :
+: :   |___|  |___|___||_______||__|\__|                    : :
+: :                                                       : :
+: :  _______  _______  _______  _______  _______  ______  : :
+: : |   |   ||   _   ||     __||_     _||    ___||   __ \ : :
+: : |       ||       ||__     |  |   |  |    ___||      < : :
+: : |__|_|__||___|___||_______|  |___|  |_______||___|__| : :
+'·:.......................................................:·'
+"""
+
+WELCOME_GUIDE = """
+  a          add a task
+  space      toggle done
+  d          delete a task
+  f          cycle space filter
+  v          cycle date view
+  tab        move between the add form's fields
+  up / down  step the date field by a day
+  ?          show this guide again
+
+  press any key to continue
+"""
 
 
 class DateInput(Input):
@@ -40,6 +70,20 @@ class DateInput(Input):
         self.value = (current + timedelta(days=days)).isoformat()
 
 
+class WelcomeScreen(Screen):
+    """The banner and key-bindings guide shown before the task list.
+
+    @sdoc[REQ-FUNC-007]
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Static(WELCOME_BANNER, markup=False, id="welcome-banner")
+        yield Static(WELCOME_GUIDE, markup=False, id="welcome-guide")
+
+    def on_key(self, event: events.Key) -> None:
+        self.app.pop_screen()
+
+
 class TaskmasterApp(App):
     """The composition root. Wires the real adapter and holds all state.
 
@@ -52,6 +96,7 @@ class TaskmasterApp(App):
         ("d", "delete_task", "Delete task"),
         ("f", "cycle_filter", "Cycle filter"),
         ("v", "cycle_date_view", "Cycle date view"),
+        ("?", "show_help", "Show help"),
     ]
 
     def __init__(
@@ -91,6 +136,11 @@ class TaskmasterApp(App):
         # binding below (toggle/delete/cycle-*) is typed into the input as a
         # literal character instead of ever reaching these actions
         self.query_one("#task-list", ListView).focus()
+        self.push_screen(WelcomeScreen())
+
+    def action_show_help(self) -> None:
+        """@sdoc[REQ-FUNC-007]"""
+        self.push_screen(WelcomeScreen())
 
     def action_add_task(self) -> None:
         """@sdoc[REQ-FUNC-001]
