@@ -4,6 +4,14 @@ Every requirement in the corpus, grouped by the file it is authored in.
 Generated from the corpus by `check-traceability.sh --report --overview` —
 do not edit by hand.
 
+## Active-view-indicator feature requirements
+
+Source: `docs/requirements/active-view-indicator.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-008 | invariant ? | taskmaster-app SHALL display the active space and the active date view components of the current filter, updated whenever either is cycled. |
+
 ## Add-task feature requirements
 
 Source: `docs/requirements/add-task.md`
@@ -91,7 +99,7 @@ Source: `docs/requirements/welcome-screen.md`
 
 ---
 
-29 requirement(s). `Derived from`: 21 declared, 8 inferred (marked `?`), 0 undetermined.
+30 requirement(s). `Derived from`: 21 declared, 9 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

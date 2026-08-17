@@ -1,0 +1,17 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    user->>app: f, to cycle the space filter
+    app->>model: the next space in the distinct-spaces cycle
+    model-->>app: the new active space, or none
+    app->>app: update the status line with the active space
+
+    user->>app: v, to cycle the date view
+    app->>app: the next date view in the fixed cycle
+    app->>app: update the status line with the active date view

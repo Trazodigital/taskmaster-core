@@ -6,6 +6,7 @@
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
 @sdoc[REQ-FUNC-007]
+@sdoc[REQ-FUNC-008]
 """
 
 import asyncio
@@ -317,6 +318,64 @@ def test_submitting_the_form_clears_text_and_space_and_resets_the_date_to_today(
     assert text_value == ""
     assert space_value == ""
     assert date_value == date.today().isoformat()
+
+
+def test_status_line_shows_all_when_no_filter_is_active():
+    """@sdoc[REQ-FUNC-008]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            return str(app.query_one("#filter-status", Static).render())
+
+    text = run(scenario())
+    assert "space: all" in text
+    assert "view: all" in text
+
+
+def test_status_line_shows_the_active_space_after_cycling_the_filter():
+    """@sdoc[REQ-FUNC-008]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("buy bread", space="home")
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            await pilot.press("f")
+            return str(app.query_one("#filter-status", Static).render())
+
+    assert "space: home" in run(scenario())
+
+
+def test_status_line_shows_the_active_date_view_after_cycling_it():
+    """@sdoc[REQ-FUNC-008]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            await pilot.press("v")
+            return str(app.query_one("#filter-status", Static).render())
+
+    assert "view: today" in run(scenario())
+
+
+def test_status_line_shows_both_the_active_space_and_date_view_together():
+    """@sdoc[REQ-FUNC-008]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("buy bread", space="home")
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            await pilot.press("f")
+            await pilot.press("v")
+            return str(app.query_one("#filter-status", Static).render())
+
+    text = run(scenario())
+    assert "space: home" in text
+    assert "view: today" in text
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):
