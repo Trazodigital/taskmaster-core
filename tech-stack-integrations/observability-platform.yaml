@@ -20,6 +20,9 @@ tool:
   interaction_mode: "cli"  # rest-api | cli | sdk
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
+#
+# Runtime (app in production sending telemetry) and CI (pipeline deploying
+# alert/dashboard/health-check definitions) usually authenticate differently.
 
 auth:
   runtime_mode: "token"           # workload-identity | api-key | token
@@ -28,6 +31,10 @@ auth:
   ci_credential_key: "kv/taskmaster/logger-token"      # path in the secrets vault (see secrets-vault.yaml)
 
 # ─── 3. Log format (framework-fixed) ──────────────────────────────────────────
+#
+# Every log event emitted by the running app MUST include the fields below.
+# `req_uid` is what makes runtime behavior traceable back to a requirement.
+# Skills invoke structured-logging enforcement based on these fields.
 
 log_format:
   event_types: [start, end, error]
@@ -41,6 +48,9 @@ log_format:
     - message
 
 # ─── 4. Deployment sources (framework-fixed) ──────────────────────────────────
+#
+# The paths where alert / dashboard / health-check source files live. Skills
+# iterate these directories to deploy definitions to the platform.
 
 deployment_sources:
   alerts:        runtime-observability/alerts/
@@ -48,13 +58,18 @@ deployment_sources:
   health_checks: runtime-observability/health-checks/
 
 # ─── 5. Commands ──────────────────────────────────────────────────────────────
+#
+# Concrete invocations for deploying definitions. Skills invoke these verbatim.
 
 commands:
-  deploy_alerts:        "echo Deploying alerts from {source}"  # e.g. "datadog-ci alert publish --path {source}"
-  deploy_dashboards:    "echo Deploying dashboards from {source}"  # e.g. "datadog-ci dashboard publish --path {source}"
-  deploy_health_checks: "echo Deploying health checks from {source}"  # e.g. "datadog-ci synthetics run-tests --config {source}"
+  deploy_alerts:        "echo Deploying alerts from '{source}'"  # e.g. "datadog-ci alert publish --path {source}"
+  deploy_dashboards:    "echo Deploying dashboards from '{source}'"  # e.g. "datadog-ci dashboard publish --path {source}"
+  deploy_health_checks: "echo Deploying health checks from '{source}'"  # e.g. "datadog-ci synthetics run-tests --config {source}"
 
 # ─── 6. Gate policy ───────────────────────────────────────────────────────────
+#
+# Every violation MUST hard-gate: the agent reports the exact violation, stops,
+# and waits for a human. No warn-and-continue.
 
 gate:
   on_missing_log_field: hard-gate         # a log event omits a required_fields entry

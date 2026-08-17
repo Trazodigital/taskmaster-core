@@ -1,0 +1,23 @@
+flowchart TD
+    subgraph ui["ui"]
+        app["taskmaster-app"]
+    end
+
+    subgraph tasks["tasks"]
+        model["task-model"]
+        port{{"TaskRepository"}}
+    end
+
+    subgraph storage["storage"]
+        adapter["JsonFileRepository"]
+    end
+
+    file[("tasks.json")]
+
+    app -->|"task list and active filter"| model
+    model -->|"filtered task list"| app
+    app -->|"load and save requests"| port
+    port -->|"load and save outcomes"| app
+    port -->|"load and save requests"| adapter
+    adapter -->|"task records to persist"| file
+    file -->|"stored task records"| adapter

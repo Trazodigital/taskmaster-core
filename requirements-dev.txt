@@ -24,8 +24,15 @@ bandit==1.8.0
 # toolchain.formatter
 black==24.10.0
 
-# toolchain.coverage_tool
+# toolchain.coverage_tool. pytest-cov drives coverage.py from the test suites so
+# the `coverage` artifact in build-pipeline.yaml § artifacts is produced by the
+# same run that produces `junit-xml`.
 coverage==7.6.9
+pytest-cov==6.0.0
+
+# Supplies bandit's `-f sarif`, which bandit does not ship natively. Required by
+# build-pipeline.yaml § artifacts.sarif.
+bandit-sarif-formatter==1.1.1
 
 # toolchain.benchmark_tool (NFR benchmarks, Phase 5)
 pytest-benchmark==5.1.0

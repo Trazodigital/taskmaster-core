@@ -1,6 +1,6 @@
-# taskmaster-core
+# gen3
 
-Framework version: v1.6.0 (pinned by the .framework submodule).
+Framework version: v3.0.0 (pinned by the .framework submodule).
 
 Built under the Team_Repo_Quality_Framework_Gentle.ai V-Model quality framework,
 vendored as a git submodule at `.framework/`. See `CHANGELOG(framework).md` for

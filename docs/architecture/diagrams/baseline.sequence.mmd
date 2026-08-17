@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant app as taskmaster-app
+    participant model as task-model
+    participant port as TaskRepository
+    participant adapter as JsonFileRepository
+    participant file as tasks.json
+
+    Note over app: startup, before the first render
+    app->>port: load request
+    port->>adapter: load request
+    adapter->>file: read stored task records
+    alt file does not exist yet
+        file-->>adapter: not found
+        adapter-->>port: empty task list and absent fingerprint
+    else stored content cannot be parsed
+        file-->>adapter: unparseable content
+        adapter-->>port: unreadable store error
+        Note over app,adapter: the app reports the error and exits without writing anything
+    else stored content parses
+        file-->>adapter: stored task records
+        adapter-->>port: task records and file fingerprint
+    end
+    port-->>app: load outcome
+
+    Note over app: every render
+    app->>model: task list, active filter and current date
+    model-->>app: filtered task list
+
+    Note over app: every change to a task
+    app->>port: save request with task list and held fingerprint
+    port->>adapter: save request with task list and held fingerprint
+    adapter->>file: read current fingerprint
+    file-->>adapter: current fingerprint
+    alt fingerprint unchanged
+        adapter->>file: write task records to temporary file
+        file-->>adapter: temporary file written
+        adapter->>file: rename temporary file over stored file
+        file-->>adapter: rename completed
+        adapter-->>port: save confirmed and new fingerprint
+    else fingerprint changed externally
+        adapter-->>port: external change detected, nothing written
+    end
+    port-->>app: save outcome

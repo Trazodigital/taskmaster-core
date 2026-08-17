@@ -5,18 +5,38 @@
   "description": "Validates tech-stack-integrations/artifact-store.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tool", "auth", "url", "retention_policies", "commands", "gate"],
+  "required": [
+    "tool",
+    "auth",
+    "url",
+    "retention_policies",
+    "commands",
+    "gate"
+  ],
   "properties": {
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "interaction_mode"],
+      "required": [
+        "name",
+        "interaction_mode"
+      ],
       "properties": {
-        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "name": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
         "interaction_mode": {
           "oneOf": [
-            { "enum": ["rest-api", "cli", "ci-native"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "rest-api",
+                "cli",
+                "ci-native"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         }
       }
@@ -24,54 +44,105 @@
     "auth": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "credential_key"],
+      "required": [
+        "mode",
+        "credential_key"
+      ],
       "properties": {
         "mode": {
           "oneOf": [
-            { "enum": ["none", "token", "oauth", "basic"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "none",
+                "token",
+                "oauth",
+                "basic"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
-        "credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "credential_key": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "url": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["base_url", "url_template"],
+      "required": [
+        "base_url",
+        "url_template"
+      ],
       "properties": {
-        "base_url": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "url_template": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "base_url": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "url_template": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "retention_policies": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["30d", "per-release", "historical"],
+      "required": [
+        "30d",
+        "per-release",
+        "historical"
+      ],
       "properties": {
-        "30d":         { "$ref": "#/$defs/stringOrPlaceholder" },
-        "per-release": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "historical":  { "$ref": "#/$defs/stringOrPlaceholder" }
+        "30d": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "per-release": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "historical": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "commands": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["publish", "fetch_historical"],
+      "required": [
+        "publish",
+        "fetch_historical"
+      ],
       "properties": {
-        "publish":          { "$ref": "#/$defs/stringOrPlaceholder" },
-        "fetch_historical": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "publish": {
+          "$ref": "#/$defs/shellCommandTemplate"
+        },
+        "fetch_historical": {
+          "$ref": "#/$defs/shellCommandTemplate"
+        }
       }
     },
     "gate": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["on_publish_failure", "on_missing_artifact", "on_broken_url", "on_retention_policy_missing"],
+      "required": [
+        "on_publish_failure",
+        "on_missing_artifact",
+        "on_broken_url",
+        "on_retention_policy_missing"
+      ],
       "properties": {
-        "on_publish_failure":         { "const": "hard-gate" },
-        "on_missing_artifact":        { "const": "hard-gate" },
-        "on_broken_url":              { "const": "hard-gate" },
-        "on_retention_policy_missing":{ "const": "hard-gate" }
+        "on_publish_failure": {
+          "const": "hard-gate"
+        },
+        "on_missing_artifact": {
+          "const": "hard-gate"
+        },
+        "on_broken_url": {
+          "const": "hard-gate"
+        },
+        "on_retention_policy_missing": {
+          "const": "hard-gate"
+        }
       }
     }
   },
@@ -79,6 +150,21 @@
     "stringOrPlaceholder": {
       "type": "string",
       "minLength": 1
+    },
+    "shellCommandTemplate": {
+      "description": "A shell command invoked verbatim by skills. Every {token} must be single-quoted: '{id}'. An unquoted token whose value carries a '#' prefix truncates the command at the shell comment character, silently discarding every argument after it.",
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "anyOf": [
+          {
+            "pattern": "(^|[^'])\\{[a-z_]+\\}"
+          },
+          {
+            "pattern": "\\{[a-z_]+\\}($|[^'])"
+          }
+        ]
+      }
     }
   }
 }

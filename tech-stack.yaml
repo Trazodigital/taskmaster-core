@@ -14,25 +14,25 @@
 # ─── 1. Project identity ──────────────────────────────────────────────────────
 
 project:
-  name: "taskmaster-core"          # short human-readable name, e.g. "orders-api"
-  language: "python"               # e.g. typescript, python, go, rust
+  name: "taskmaster-core"              # short human-readable name, e.g. "orders-api"
+  language: "python"          # e.g. typescript, python, go, rust
   runtime: "python@3.14"           # e.g. node@20, python@3.12, go@1.22
-  package_manager: "pip"           # e.g. pnpm, uv, go-modules
+  package_manager: "pip"   # e.g. pnpm, uv, go-modules
 
 # ─── 2. Toolchain (flat facts referenced by skills) ───────────────────────────
 
 toolchain:
-  linter: "flake8"                 # e.g. oxlint, ruff, golangci-lint
-  formatter: "black"               # e.g. prettier, ruff-format, gofmt
-  test_runner: "pytest"            # e.g. vitest, pytest, go-test
+  linter: "flake8"            # e.g. oxlint, ruff, golangci-lint
+  formatter: "black"         # e.g. prettier, ruff-format, gofmt
+  test_runner: "pytest"       # e.g. vitest, pytest, go-test
   coverage_tool: "coverage.py"     # e.g. c8, coverage.py, go-cover
-  security_scanner: "bandit"       # e.g. trufflehog, bandit, gosec
-  benchmark_tool: "pytest-benchmark" # e.g. vitest-bench, pytest-benchmark, go-test-bench
+  security_scanner: "bandit"  # e.g. trufflehog, bandit, gosec
+  benchmark_tool: "pytest-benchmark"    # e.g. vitest-bench, pytest-benchmark, go-test-bench
 
 # ─── 3. Conventions (values the framework enforces) ───────────────────────────
 
 conventions:
-  req_uid_pattern: "REQ-[A-Z]+-[0-9]+"
+  req_uid_pattern: "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"   # MUST match requirements-tracker.yaml uid.pattern
   adr_slug_pattern: "[0-9]{4}-[a-z0-9-]+"
   commit_style: conventional-commits
   branching: trunk-based
@@ -40,6 +40,7 @@ conventions:
     requirements_dir: docs/requirements
     design_dir: docs/design
     adr_dir: docs/adr
+    human_documentation_dir: docs/human_documentation   # derived, human-readable; holds the MANDATORY requirements-overview.md (docs-overview-gate)
     src_dir: src
     tests_dir: tests
 
@@ -48,7 +49,7 @@ conventions:
 markers:
   sdoc_marker: "@sdoc[<UID>]"
   adr_marker: "@adr[<NNNN>]"
-  comment_style: "python-docstring" # e.g. jsdoc, python-docstring, godoc
+  comment_style: "python-docstring"     # e.g. jsdoc, python-docstring, godoc
 
 # ─── 5. Integration contract pointers ─────────────────────────────────────────
 #

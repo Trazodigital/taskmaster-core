@@ -3,6 +3,15 @@
 # Describes HOW the framework reads FORMAL, USER-ORIENTED acceptance evidence
 # (Azure Test Plans, TestRail, Xray, …) that backs the Phase-5 "Accepted" status.
 #
+# This is DISTINCT from automated CI verification. Two never-merged statuses:
+#   Verified — automated suites green in CI + @sdoc coverage (Phase 4,
+#              owned by verification-suite-execution). Blocks MERGE.
+#   Accepted — a formal/manual test case (TEST-xxx) with a PASS result here
+#              (Phase 5, owned by system-acceptance-gate). Blocks RELEASE.
+# Azure Test Plans NEVER gates a merge. Automated coverage passing does not make
+# a REQ "Accepted", and a missing acceptance record never blocks development — it
+# reads as `unknown` (fail-soft).
+#
 # TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
 # choice before any framework skill is invoked. Skills MUST hard-gate on any
 # remaining <PLACEHOLDER> value.
@@ -17,6 +26,9 @@ tool:
   interaction_mode: "export-file"  # export-file | rest-api
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
+#
+# Only used when interaction_mode is rest-api. Leave placeholders in place when
+# interaction_mode is export-file — skills MUST skip auth resolution in that case.
 
 auth:
   mode: "none"              # none | token | pat | oauth
@@ -35,6 +47,9 @@ test_id:
   verifies_syntax: "Verifies: REQ-FUNC-001"   # how a test case references a REQ UID, e.g. "Verifies: REQ-FUNC-137"
 
 # ─── 5. Acceptance export ─────────────────────────────────────────────────────
+#
+# The traceability report reads this committed / exported file to resolve the
+# Accepted column — no live API call is required in the critical path.
 
 acceptance_export:
   path: docs/acceptance/acceptance.json   # framework-fixed default
@@ -52,6 +67,9 @@ results:
   accepted_when: PASS              # a REQ is "Accepted" only when its latest linked result is PASS
 
 # ─── 7. Gate policy ───────────────────────────────────────────────────────────
+#
+# Deliberate deviation from the framework's hard-gate default: acceptance is a
+# Phase-5 concern and NEVER blocks a merge.
 
 gate:
   blocks_merge: never              # Accepted is never a merge gate
