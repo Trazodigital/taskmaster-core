@@ -5,6 +5,15 @@ in any file under `docs/requirements/` or `docs/design/` is defined here
 exactly once. No synonyms in requirements or designs — always the term
 defined here.
 
+This file covers task-domain vocabulary only (what the user thinks in terms
+of: task, space, overdue...). The system's building blocks — `taskmaster-app`,
+`task-model`, `TaskRepository`, `JsonFileRepository`, and the `ui`/`tasks`/
+`storage` modules that contain them — are architecture vocabulary, already
+defined in `docs/architecture/baseline.md § MODULES/PORTS/ADAPTERS`, not
+duplicated here. Editing this file to add or remove a term referenced by
+`docs/architecture/**` is itself an architecture change, gated by
+`architecture-protection`, not a documentation tweak.
+
 This file is authored and modified only through the `domain-glossary`
 skill (`skills/domain-glossary/SKILL.md`). Its structural invariants are
 enforced by `scripts/check-glossary.sh`.
@@ -66,6 +75,11 @@ Rules the parser enforces:
 
 **Definition:** The combination of space and date view currently selected by the user, determining which tasks are presented.
 **Examples:** space "work" with the today view; no space with the overdue view.
+
+## date view
+
+**Definition:** The date-based component of a filter: one of today, due this week, overdue, or none, selected by cycling and applied together with the active space.
+**Examples:** cycling from today to due this week; cycling from overdue back to none.
 
 ## due this week
 
