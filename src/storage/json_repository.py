@@ -1,5 +1,7 @@
 """
 @sdoc[REQ-FUNC-001]
+@sdoc[REQ-FUNC-004]
+@sdoc[REQ-FUNC-005]
 @sdoc[REQ-ARCH-004]
 @sdoc[REQ-ARCH-005]
 @sdoc[REQ-ARCH-016]
@@ -13,6 +15,7 @@
 import hashlib
 import json
 import os
+from datetime import date
 from pathlib import Path
 
 from tasks.model import Task
@@ -37,6 +40,8 @@ class JsonFileRepository:
         """@sdoc[REQ-ARCH-016]
         @sdoc[REQ-ARCH-017]
         @sdoc[REQ-ARCH-018]
+        @sdoc[REQ-FUNC-004]
+        @sdoc[REQ-FUNC-005]
         """
         if not self._path.exists():
             return LoadResult(tasks=[], fingerprint=None)
@@ -49,21 +54,41 @@ class JsonFileRepository:
                 tasks=[], fingerprint=None, error="store content is not valid JSON"
             )
 
-        tasks = [Task(text=r["text"], done=r["done"]) for r in records]
+        tasks = [
+            Task(
+                text=r["text"],
+                done=r["done"],
+                space=r.get("space", ""),
+                due_date=(
+                    date.fromisoformat(r["due_date"]) if r.get("due_date") else None
+                ),
+            )
+            for r in records
+        ]
         return LoadResult(tasks=tasks, fingerprint=self._fingerprint_of(raw))
 
     def save(self, tasks: list[Task], fingerprint: str | None) -> SaveResult:
         """@sdoc[REQ-ARCH-019]
         @sdoc[REQ-ARCH-020]
         @sdoc[REQ-ARCH-021]
+        @sdoc[REQ-FUNC-004]
+        @sdoc[REQ-FUNC-005]
         """
         current = self._current_fingerprint()
         if fingerprint != current:
             return SaveResult(ok=False, fingerprint=None)
 
-        payload = json.dumps([{"text": t.text, "done": t.done} for t in tasks]).encode(
-            "utf-8"
-        )
+        payload = json.dumps(
+            [
+                {
+                    "text": t.text,
+                    "done": t.done,
+                    "space": t.space,
+                    "due_date": t.due_date.isoformat() if t.due_date else None,
+                }
+                for t in tasks
+            ]
+        ).encode("utf-8")
         tmp_path = self._path.with_suffix(self._path.suffix + ".tmp")
         tmp_path.write_bytes(payload)
         os.replace(tmp_path, self._path)

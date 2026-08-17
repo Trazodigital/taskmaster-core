@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box storage
+    participant adapter as JsonFileRepository
+    end
+    participant file as tasks.json
+
+    Note over adapter: as shipped, save/load only carry text and done
+
+    user->>app: a task with a space and a due date, then enter
+    app->>adapter: save the full task list
+    adapter->>file: text and done only — space and due date dropped
+    adapter-->>app: a new file fingerprint
+
+    user->>app: restart the application
+    app->>adapter: load
+    adapter->>file: read the stored records
+    file-->>adapter: text and done only
+    adapter-->>app: tasks with an empty space and no due date
+
+    Note over app: the space and due date the user entered are gone

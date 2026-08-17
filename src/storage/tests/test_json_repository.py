@@ -1,5 +1,7 @@
 """
 @sdoc[REQ-FUNC-001]
+@sdoc[REQ-FUNC-004]
+@sdoc[REQ-FUNC-005]
 @sdoc[REQ-ARCH-017]
 @sdoc[REQ-ARCH-018]
 @sdoc[REQ-ARCH-019]
@@ -7,8 +9,10 @@
 @sdoc[REQ-ARCH-021]
 """
 
+from datetime import date
+
 from storage.json_repository import JsonFileRepository
-from tasks.model import new_task
+from tasks.model import build_task, new_task
 
 
 def test_load_on_a_missing_store_yields_an_empty_list(tmp_path):
@@ -34,6 +38,39 @@ def test_save_then_load_round_trips_through_a_new_instance(tmp_path):
     assert save_result.ok is True
     assert [t.text for t in load_result.tasks] == ["buy bread"]
     assert load_result.fingerprint == save_result.fingerprint
+
+
+def test_save_then_load_round_trips_space_and_due_date(tmp_path):
+    """@sdoc[REQ-FUNC-004]
+    @sdoc[REQ-FUNC-005]
+    """
+    store = tmp_path / "tasks.json"
+    task = build_task(text="buy bread", space="home", due_date="2026-08-20")
+    writer = JsonFileRepository(store)
+    writer.save([task], fingerprint=None)
+
+    reader = JsonFileRepository(store)
+    loaded = reader.load().tasks[0]
+
+    assert loaded.space == "home"
+    assert loaded.due_date == date(2026, 8, 20)
+
+
+def test_load_on_a_record_missing_space_and_due_date_keys_still_loads(tmp_path):
+    """@sdoc[REQ-FUNC-004]
+    @sdoc[REQ-FUNC-005]
+
+    A store file written before this fix (or hand-edited) carries only
+    "text" and "done" — loading it must not raise.
+    """
+    store = tmp_path / "tasks.json"
+    store.write_text('[{"text": "buy bread", "done": false}]', encoding="utf-8")
+    repo = JsonFileRepository(store)
+
+    task = repo.load().tasks[0]
+
+    assert task.space == ""
+    assert task.due_date is None
 
 
 def test_save_leaves_no_temporary_file_behind(tmp_path):
