@@ -3,6 +3,7 @@
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-003]
 @sdoc[REQ-FUNC-004]
+@sdoc[REQ-FUNC-005]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-006]
 @sdoc[REQ-ARCH-008]
@@ -12,12 +13,30 @@
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import date
 
-from tasks.model import Task, by_space, distinct_spaces, new_task, toggle_done
+from tasks.model import (
+    Task,
+    by_space,
+    distinct_spaces,
+    due_this_week,
+    due_today,
+    new_task,
+    overdue,
+    toggle_done,
+)
+
 from tasks.repository import TaskRepository
 from ui.logging_events import emit
 
 logger = logging.getLogger(__name__)
+
+_DATE_VIEW_FILTERS = {
+    "today": due_today,
+    "week": due_this_week,
+    "overdue": overdue,
+}
+_DATE_VIEW_CYCLE = [None, "today", "week", "overdue"]
 
 
 @dataclass
@@ -37,19 +56,30 @@ class TaskmasterState:
         self.tasks: list[Task] = load_result.tasks
         self._fingerprint = load_result.fingerprint
         self.active_space: str | None = None
+        self.active_date_view: str | None = None
 
     @property
     def visible_tasks(self) -> list[Task]:
-        """@sdoc[REQ-FUNC-004]"""
-        if self.active_space is None:
-            return self.tasks
-        return by_space(self.tasks, self.active_space)
+        """@sdoc[REQ-FUNC-004]
+        @sdoc[REQ-FUNC-005]
+        """
+        tasks = self.tasks
+        if self.active_space is not None:
+            tasks = by_space(tasks, self.active_space)
+        if self.active_date_view is not None:
+            tasks = _DATE_VIEW_FILTERS[self.active_date_view](tasks, date.today())
+        return tasks
 
     def cycle_filter(self) -> None:
         """@sdoc[REQ-FUNC-004]"""
         cycle: list[str | None] = [None, *distinct_spaces(self.tasks)]
         current = cycle.index(self.active_space) if self.active_space in cycle else 0
         self.active_space = cycle[(current + 1) % len(cycle)]
+
+    def cycle_date_view(self) -> None:
+        """@sdoc[REQ-FUNC-005]"""
+        current = _DATE_VIEW_CYCLE.index(self.active_date_view)
+        self.active_date_view = _DATE_VIEW_CYCLE[(current + 1) % len(_DATE_VIEW_CYCLE)]
 
     def add_task(self, text: str) -> SaveOutcome:
         """@sdoc[REQ-FUNC-001]"""

@@ -41,6 +41,14 @@ Source: `docs/requirements/baseline.md`
 | REQ-ARCH-021 | invariant | Task records SHALL be written to a temporary file and then renamed over the store, so that an interrupted write leaves the previous content intact. |
 | REQ-NFR-PERF-001 | invariant ? | The application SHALL complete its startup load and present the first view within a bounded time when the store holds one thousand tasks. |
 
+## Date-view feature requirements
+
+Source: `docs/requirements/date-view.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-005 | invariant ? | The user SHALL be able to tag a task with a due date via the existing add-task input and cycle taskmaster-app through views of tasks due today, due this week, and overdue. |
+
 ## Delete-task feature requirements
 
 Source: `docs/requirements/delete-task.md`
@@ -67,7 +75,7 @@ Source: `docs/requirements/toggle-task.md`
 
 ---
 
-26 requirement(s). `Derived from`: 21 declared, 5 inferred (marked `?`), 0 undetermined.
+27 requirement(s). `Derived from`: 21 declared, 6 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

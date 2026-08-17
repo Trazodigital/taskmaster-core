@@ -67,6 +67,11 @@ Rules the parser enforces:
 **Definition:** The combination of space and date view currently selected by the user, determining which tasks are presented.
 **Examples:** space "work" with the today view; no space with the overdue view.
 
+## due this week
+
+**Definition:** The state of a task that is not complete and whose due date falls within the next seven days counting from the current date, inclusive of today.
+**Examples:** on 2026-08-17, a task due 2026-08-17 through 2026-08-23 is due this week; one due 2026-08-24 is not.
+
 ## store
 
 **Definition:** The single local file in which task records are persisted between runs of the application.

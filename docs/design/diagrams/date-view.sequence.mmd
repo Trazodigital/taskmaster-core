@@ -1,0 +1,13 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    user->>app: cycle-date-view key
+    app->>model: full task list and today's date
+    model-->>app: the tasks matching the active date view
+    app-->>user: the filtered list

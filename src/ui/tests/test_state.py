@@ -3,10 +3,12 @@
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-003]
 @sdoc[REQ-FUNC-004]
+@sdoc[REQ-FUNC-005]
 """
 
 import json
 import logging
+from datetime import date, timedelta
 
 from storage.in_memory_repository import InMemoryRepository
 from ui.state import TaskmasterState
@@ -224,3 +226,48 @@ def test_cycle_filter_with_no_spaces_stays_on_all():
     state.cycle_filter()
 
     assert state.active_space is None
+
+
+def test_cycle_date_view_advances_through_today_week_overdue_then_wraps_to_all():
+    """@sdoc[REQ-FUNC-005]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+
+    state.cycle_date_view()
+    assert state.active_date_view == "today"
+
+    state.cycle_date_view()
+    assert state.active_date_view == "week"
+
+    state.cycle_date_view()
+    assert state.active_date_view == "overdue"
+
+    state.cycle_date_view()
+    assert state.active_date_view is None
+
+
+def test_visible_tasks_applies_the_active_date_view():
+    """@sdoc[REQ-FUNC-005]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    today_tag = f"!{date.today().isoformat()}"
+    later_tag = f"!{(date.today() + timedelta(days=30)).isoformat()}"
+    state.add_task(f"ship the release {today_tag}")
+    state.add_task(f"plan next quarter {later_tag}")
+
+    state.cycle_date_view()  # active_date_view = "today"
+
+    assert [t.text for t in state.visible_tasks] == ["ship the release"]
+
+
+def test_visible_tasks_combines_the_active_space_and_date_view():
+    """@sdoc[REQ-FUNC-005]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    today_tag = f"!{date.today().isoformat()}"
+    state.add_task(f"ship the release {today_tag} @work")
+    state.add_task(f"call the plumber {today_tag} @home")
+    state.cycle_filter()  # active_space = "home"
+    state.cycle_date_view()  # active_date_view = "today"
+
+    assert [t.text for t in state.visible_tasks] == ["call the plumber"]
