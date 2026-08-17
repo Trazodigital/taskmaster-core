@@ -120,6 +120,110 @@ proposal that was never run should say so.
 
 <!-- Newest first. -->
 
+### FB-009 — `declared_names_in()` reads the first word of every prose line in MODULES/PORTS as a declared name, and `design-artifacts`' claimed "empty section" hard-gate is not enforced by the script
+
+- **Date:** 2026-08-17
+- **Framework version:** v3.0.0 @ 978cd9e83ed4b3ebffae06b5ccedd393b39528f2
+- **Severity:** medium
+- **Class:** C4
+- **Status:** open
+
+**What the framework claims**
+
+`skills/design-artifacts/SKILL.md:68` lists as a hard-gate: "**Empty section.** `MODULES`, `PORTS`,
+`ADAPTERS`, or `DATA_FLOW` is present but empty." `MODULES`/`PORTS` are documented
+(`skills/design-artifacts/SKILL.md:28-29`) as "a list of named modules" / "a list of interface
+types" — implying structured bullet content, with no stated restriction against explanatory prose
+alongside the list.
+
+**What actually happens**
+
+Two related defects in `scripts/check-design-review.sh`'s `declared_names_in()`
+(`:192-212`, first identified informally during the architecture PR and never filed — see the
+`adapter.` phantom-module incident noted in that PR's session, reproduced here in a new shape):
+
+1. **Prose inside a `PORTS`/`MODULES` section is read as declared names.** The function takes the
+   first word of *every* line in the section (after stripping a leading `-`/`*`/`+` bullet marker),
+   not just actual bulleted entries. A two-line explanation —
+   ```
+   None. Filtering is a pure in-memory operation on the already-loaded task list — no load or save,
+   so TaskRepository is not exercised by this feature's new code.
+   ```
+   — was read as declaring two modules named `None.` and `so`, both then failing the diagram-text
+   cross-check:
+   ```
+   check-design-review.sh: hard-gate: docs/design/filter-by-space.md: port 'None.' declared in
+     PORTS but absent from every mermaid diagram
+   check-design-review.sh: hard-gate: docs/design/filter-by-space.md: port 'so' declared in PORTS
+     but absent from every mermaid diagram
+   ```
+2. **A genuinely empty `PORTS`/`ADAPTERS` section — the heading with zero content lines before the
+   next heading — passes the script with 0 violations**, despite the skill's prose declaring that
+   exact shape a hard-gate. Verified by testing the same file with the heading followed immediately
+   by the next `##` heading: `"violations": 0`.
+
+**Reproduction**
+
+```bash
+# (1) prose-as-name
+printf '## PORTS\n\nNone. No port is touched here,\nso nothing is called.\n\n## ADAPTERS\n' \
+  >> docs/design/some-feature.md   # any file whose REQS_COVERED already resolves
+QF_ROOT="$PWD" .framework/scripts/check-design-review.sh --scope all
+# hard-gates on phantom ports 'None.' and 'so'
+
+# (2) empty section not gated
+printf '## PORTS\n\n## ADAPTERS\n\n' >> docs/design/some-feature.md
+QF_ROOT="$PWD" .framework/scripts/check-design-review.sh --scope all
+# "violations": 0 — the skill's claimed hard-gate does not fire
+```
+
+**Verification**
+
+RUN, both halves, on this product's `feature/REQ-FUNC-004-filter-by-space` design file while
+authoring a feature that genuinely touches no port (filtering is pure in-memory, no load/save). Not
+hypothesized from reading the script — the exact phantom names `None.` and `so` are copied from the
+real failure output above.
+
+**Workaround applied**
+
+Prefixed the explanatory text with `> ` (Markdown blockquote). `declared_names_in()`'s name-capture
+regex is anchored `^[A-Za-z]...`, and `>` is not a letter, so a blockquote line contributes no
+candidate name while still rendering as visible prose to a human reader:
+
+```markdown
+## PORTS
+
+> None. Filtering is a pure in-memory operation on the already-loaded task list — no load or save,
+> so TaskRepository is not exercised by this feature's new code.
+```
+
+Verified this passes with 0 violations. No script or skill file was modified; the workaround is
+Markdown authoring style, applied per-file.
+
+**Blast radius**
+
+Every product on this framework, on any design file where a `MODULES`/`PORTS` section either (a)
+carries any multi-word or multi-line explanatory prose rather than pure single-line bullets — an
+authoring style nothing in the skill text forbids — or (b) is genuinely empty because a feature
+legitimately touches no port, which `REQ-ARCH-002`-shaped pure-in-memory features (like this one)
+make a real, non-exotic case, not a corner case.
+
+**Impact on this product**
+
+One failed gate run during Phase 2 of `REQ-FUNC-004`, diagnosed and resolved by rewriting the
+section as a blockquote before authoring proceeded. No incorrect state shipped.
+
+**Proposed fix** *(optional)*
+
+Not tested; proposal only. For (1): restrict `declared_names_in()` to lines that are actually
+bulleted (require the leading `-`/`*`/`+` the function already strips, rather than falling through
+to bare-text lines) — a prose line with no bullet marker should never be read as a declaration. For
+(2): either implement the empty-section hard-gate the skill already documents, or remove that claim
+from `skills/design-artifacts/SKILL.md:68` if an intentionally-empty section (a feature that
+touches no port) was meant to be legal all along — the skill and the script must agree either way.
+
+---
+
 ### FB-008 — `verification-suite-execution` resolves `gates.min_coverage_percent` and two other keys the config schema forbids from ever existing
 
 - **Date:** 2026-08-17

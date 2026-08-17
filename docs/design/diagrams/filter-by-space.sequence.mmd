@@ -1,0 +1,15 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    user->>app: cycle-filter key
+    app->>model: distinct spaces present in the full task list
+    model-->>app: the next space in the cycle, or all
+    app->>model: filter the full task list by the active space
+    model-->>app: the filtered task list
+    app-->>user: the filtered list

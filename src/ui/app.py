@@ -28,6 +28,7 @@ class TaskmasterApp(App):
         ("a", "add_task", "Add task"),
         ("space", "toggle_task", "Toggle done"),
         ("d", "delete_task", "Delete task"),
+        ("f", "cycle_filter", "Cycle filter"),
     ]
 
     def __init__(
@@ -80,6 +81,11 @@ class TaskmasterApp(App):
         """@sdoc[REQ-FUNC-003]"""
         self._act_on_selected(self.state.delete_task)
 
+    def action_cycle_filter(self) -> None:
+        """@sdoc[REQ-FUNC-004]"""
+        self.state.cycle_filter()
+        self._refresh_list()
+
     def _act_on_selected(self, action) -> None:
         task_list = self.query_one("#task-list", ListView)
         index = task_list.index
@@ -91,7 +97,7 @@ class TaskmasterApp(App):
     def _refresh_list(self) -> None:
         task_list = self.query_one("#task-list", ListView)
         task_list.clear()
-        for task in self.state.tasks:
+        for task in self.state.visible_tasks:
             mark = "x" if task.done else " "
             # markup=False: task text is arbitrary user input, never
             # interpreted as Rich markup — REQ-ARCH-018's untrusted-input
