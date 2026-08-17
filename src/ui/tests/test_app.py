@@ -235,6 +235,29 @@ def test_toggle_key_reaches_the_app_while_the_list_holds_focus():
     assert run(scenario()) is True
 
 
+def test_toggling_the_second_selected_task_twice_toggles_it_back_not_the_first():
+    """@sdoc[REQ-FUNC-002]
+
+    Regression: _refresh_list's clear() dropped the selection on every
+    render, so the fallback that re-selects index 0 for reachability
+    fired again right after acting on a different task, silently
+    moving the selection to the first task.
+    """
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("first task")
+        app.state.add_task("second task")
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one(ListView).index = 1  # select the second task
+            await pilot.press("space")  # toggle it on
+            await pilot.press("space")  # toggle it back off
+            return [t.done for t in app.state.tasks]
+
+    assert run(scenario()) == [False, False]
+
+
 def test_date_field_is_prefilled_with_todays_date():
     """@sdoc[REQ-FUNC-006]"""
 

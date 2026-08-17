@@ -212,6 +212,7 @@ class TaskmasterApp(App):
 
     def _refresh_list(self) -> None:
         """@sdoc[REQ-FUNC-001]
+        @sdoc[REQ-FUNC-002]
         @sdoc[REQ-FUNC-008]
         """
         space = self.state.active_space or "all"
@@ -224,6 +225,12 @@ class TaskmasterApp(App):
 
         today = date.today()
         task_list = self.query_one("#task-list", ListView)
+        # ListView.clear() always drops the selection; capture it first so
+        # it can be restored by position — otherwise every refresh (even the
+        # one right after toggling/deleting the selected task) falls through
+        # to the index-0 fallback below, silently moving the selection off
+        # whatever the user actually had selected.
+        previous_index = task_list.index
         task_list.clear()
         for task in self.state.visible_tasks:
             mark = "x" if task.done else " "
@@ -238,8 +245,13 @@ class TaskmasterApp(App):
             else:
                 label.add_class("task-in-progress")
             task_list.append(ListItem(label))
-        # ListView.clear() drops the selection; without re-selecting, toggle
-        # and delete are unreachable until the user manually presses an
-        # arrow key first — same reachability defect as the focus bug above.
-        if task_list.index is None and len(task_list) > 0:
-            task_list.index = 0
+        # Without re-selecting, toggle and delete are unreachable until the
+        # user manually presses an arrow key first — same reachability
+        # defect as the focus bug above. Restore the same position when it's
+        # still in range; only default to the first task when there truly
+        # was no prior selection (or it fell out of range).
+        if len(task_list) > 0:
+            if previous_index is not None and previous_index < len(task_list):
+                task_list.index = previous_index
+            else:
+                task_list.index = 0
