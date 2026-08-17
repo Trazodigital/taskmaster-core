@@ -3,6 +3,7 @@
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 """
 
 from dataclasses import dataclass, replace
@@ -42,6 +43,23 @@ def new_task(raw_text: str) -> Task:
 
     text = " ".join(tokens) if tokens else raw_text
     return Task(text=text, space=space, due_date=due_date)
+
+
+def build_task(*, text: str, space: str, due_date: str) -> Task:
+    """@sdoc[REQ-FUNC-006]
+
+    Builds a task from already-distinct field values (the structured add
+    form), as opposed to `new_task`'s single-string tag parsing. A due_date
+    that is empty or does not parse is dropped rather than blocking creation
+    or crashing — the same crash-safety posture new_task's own date tag has.
+    """
+    parsed_due_date = None
+    if due_date:
+        try:
+            parsed_due_date = date.fromisoformat(due_date)
+        except ValueError:
+            pass
+    return Task(text=text, space=space, due_date=parsed_due_date)
 
 
 def toggle_done(task: Task) -> Task:

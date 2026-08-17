@@ -4,6 +4,7 @@
 @sdoc[REQ-FUNC-003]
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 """
 
 import json
@@ -23,6 +24,18 @@ def test_add_task_appends_and_saves_through_the_repository():
 
     assert [t.text for t in state.tasks] == ["buy bread"]
     assert repo.load().tasks[0].text == "buy bread"
+
+
+def test_add_task_accepts_space_and_due_date_from_the_form_fields():
+    """@sdoc[REQ-FUNC-006]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+
+    state.add_task("buy bread", space="home", due_date="2026-08-20")
+
+    task = state.tasks[0]
+    assert task.space == "home"
+    assert task.due_date == date(2026, 8, 20)
 
 
 def test_add_task_reports_external_change_and_keeps_the_task_visible():
@@ -161,8 +174,8 @@ def test_visible_tasks_shows_everything_with_no_active_filter():
     """@sdoc[REQ-FUNC-004]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    state.add_task("buy bread @home")
-    state.add_task("ship the release @work")
+    state.add_task("buy bread", space="home")
+    state.add_task("ship the release", space="work")
 
     assert [t.text for t in state.visible_tasks] == ["buy bread", "ship the release"]
 
@@ -171,8 +184,8 @@ def test_cycle_filter_advances_through_distinct_spaces_then_wraps_to_all():
     """@sdoc[REQ-FUNC-004]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    state.add_task("buy bread @home")
-    state.add_task("ship the release @work")
+    state.add_task("buy bread", space="home")
+    state.add_task("ship the release", space="work")
 
     state.cycle_filter()
     assert state.active_space == "home"
@@ -191,8 +204,8 @@ def test_toggle_task_with_an_active_filter_toggles_the_right_task():
     """@sdoc[REQ-FUNC-004]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    state.add_task("buy bread @home")
-    state.add_task("ship the release @work")
+    state.add_task("buy bread", space="home")
+    state.add_task("ship the release", space="work")
     state.cycle_filter()  # active_space = "home"
     state.cycle_filter()  # active_space = "work", visible_tasks = ["ship the release"]
 
@@ -207,8 +220,8 @@ def test_delete_task_with_an_active_filter_deletes_the_right_task():
     """@sdoc[REQ-FUNC-004]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    state.add_task("buy bread @home")
-    state.add_task("ship the release @work")
+    state.add_task("buy bread", space="home")
+    state.add_task("ship the release", space="work")
     state.cycle_filter()  # active_space = "home"
     state.cycle_filter()  # active_space = "work", visible_tasks = ["ship the release"]
 
@@ -250,10 +263,10 @@ def test_visible_tasks_applies_the_active_date_view():
     """@sdoc[REQ-FUNC-005]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    today_tag = f"!{date.today().isoformat()}"
-    later_tag = f"!{(date.today() + timedelta(days=30)).isoformat()}"
-    state.add_task(f"ship the release {today_tag}")
-    state.add_task(f"plan next quarter {later_tag}")
+    today = date.today().isoformat()
+    later = (date.today() + timedelta(days=30)).isoformat()
+    state.add_task("ship the release", due_date=today)
+    state.add_task("plan next quarter", due_date=later)
 
     state.cycle_date_view()  # active_date_view = "today"
 
@@ -264,9 +277,9 @@ def test_visible_tasks_combines_the_active_space_and_date_view():
     """@sdoc[REQ-FUNC-005]"""
     repo = InMemoryRepository()
     state = TaskmasterState(repo)
-    today_tag = f"!{date.today().isoformat()}"
-    state.add_task(f"ship the release {today_tag} @work")
-    state.add_task(f"call the plumber {today_tag} @home")
+    today = date.today().isoformat()
+    state.add_task("ship the release", space="work", due_date=today)
+    state.add_task("call the plumber", space="home", due_date=today)
     state.cycle_filter()  # active_space = "home"
     state.cycle_date_view()  # active_date_view = "today"
 

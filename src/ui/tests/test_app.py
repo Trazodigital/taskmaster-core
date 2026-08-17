@@ -4,10 +4,12 @@
 @sdoc[REQ-FUNC-003]
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 """
 
 import asyncio
 import logging
+from datetime import date, timedelta
 
 from textual.widgets import Input, ListView, Label
 
@@ -156,6 +158,87 @@ def test_toggle_key_reaches_the_app_while_the_list_holds_focus():
             return app.state.tasks[0].done
 
     assert run(scenario()) is True
+
+
+def test_date_field_is_prefilled_with_todays_date():
+    """@sdoc[REQ-FUNC-006]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test():
+            return app.query_one("#date-input", Input).value
+
+    assert run(scenario()) == date.today().isoformat()
+
+
+def test_up_on_the_date_field_advances_it_by_one_day():
+    """@sdoc[REQ-FUNC-006]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            app.query_one("#date-input", Input).focus()
+            await pilot.press("up")
+            return app.query_one("#date-input", Input).value
+
+    expected = (date.today() + timedelta(days=1)).isoformat()
+    assert run(scenario()) == expected
+
+
+def test_down_on_the_date_field_retreats_it_by_one_day():
+    """@sdoc[REQ-FUNC-006]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            app.query_one("#date-input", Input).focus()
+            await pilot.press("down")
+            return app.query_one("#date-input", Input).value
+
+    expected = (date.today() - timedelta(days=1)).isoformat()
+    assert run(scenario()) == expected
+
+
+def test_submitting_the_form_creates_a_task_with_the_space_and_date_fields():
+    """@sdoc[REQ-FUNC-006]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#space-input", Input).value = "home"
+            app.query_one("#date-input", Input).value = "2026-08-20"
+            app.query_one("#task-input", Input).focus()
+            await pilot.press("enter")
+            return app.state.tasks[0]
+
+    task = run(scenario())
+    assert task.text == "buy bread"
+    assert task.space == "home"
+    assert task.due_date == date(2026, 8, 20)
+
+
+def test_submitting_the_form_clears_text_and_space_and_resets_the_date_to_today():
+    """@sdoc[REQ-FUNC-006]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#space-input", Input).value = "home"
+            app.query_one("#date-input", Input).value = "2026-08-20"
+            app.query_one("#task-input", Input).focus()
+            await pilot.press("enter")
+            return (
+                app.query_one("#task-input", Input).value,
+                app.query_one("#space-input", Input).value,
+                app.query_one("#date-input", Input).value,
+            )
+
+    text_value, space_value, date_value = run(scenario())
+    assert text_value == ""
+    assert space_value == ""
+    assert date_value == date.today().isoformat()
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):

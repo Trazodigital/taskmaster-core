@@ -3,11 +3,13 @@
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 """
 
 from datetime import date
 
 from tasks.model import (
+    build_task,
     by_space,
     distinct_spaces,
     due_this_week,
@@ -160,3 +162,28 @@ def test_date_filters_are_deterministic():
     tasks = [new_task("ship the release !2026-08-16")]
 
     assert overdue(tasks, today) == overdue(tasks, today)
+
+
+def test_build_task_from_separate_field_values():
+    """@sdoc[REQ-FUNC-006]"""
+    task = build_task(text="buy bread", space="home", due_date="2026-08-20")
+
+    assert task.text == "buy bread"
+    assert task.space == "home"
+    assert task.due_date == date(2026, 8, 20)
+
+
+def test_build_task_with_an_empty_date_field_has_no_due_date():
+    """@sdoc[REQ-FUNC-006]"""
+    task = build_task(text="buy bread", space="", due_date="")
+
+    assert task.due_date is None
+
+
+def test_build_task_with_an_unparseable_date_field_has_no_due_date_but_still_builds():
+    """@sdoc[REQ-FUNC-006]"""
+    # a stray edit leaving garbage in the date field must never block creation
+    task = build_task(text="buy bread", space="", due_date="not-a-date")
+
+    assert task.text == "buy bread"
+    assert task.due_date is None

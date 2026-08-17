@@ -1,0 +1,20 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box tasks
+    participant model as task-model
+    end
+
+    Note over app: add key opens three fields: text, space, and a date pre-filled with today
+
+    user->>app: text, then tab to space, then tab to date
+    user->>app: up or down, to adjust the date by a day
+    user->>app: enter, on any of the three fields
+
+    app->>model: task record from the text, space, and date fields
+    model-->>app: the built task record
+
+    app->>app: fields clear, date resets to today, focus returns to the task list
+    app-->>user: the new task in the list
