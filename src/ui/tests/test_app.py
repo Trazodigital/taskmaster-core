@@ -8,6 +8,7 @@
 @sdoc[REQ-FUNC-007]
 @sdoc[REQ-FUNC-008]
 @sdoc[REQ-FUNC-009]
+@sdoc[REQ-FUNC-010]
 """
 
 import asyncio
@@ -447,6 +448,69 @@ def test_pending_not_overdue_task_gets_the_in_progress_css_class():
             return label.has_class("task-in-progress")
 
     assert run(scenario()) is True
+
+
+def test_escape_on_the_text_field_cancels_without_creating_a_task():
+    """@sdoc[REQ-FUNC-010]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#space-input", Input).value = "home"
+            app.query_one("#date-input", Input).value = "2026-08-20"
+            app.query_one("#task-input", Input).focus()
+            await pilot.press("escape")
+            return (
+                app.state.tasks,
+                app.focused,
+                app.query_one("#task-input", Input).value,
+                app.query_one("#space-input", Input).value,
+                app.query_one("#date-input", Input).value,
+            )
+
+    tasks, focused, text_value, space_value, date_value = run(scenario())
+    assert tasks == []
+    assert isinstance(focused, ListView)
+    assert text_value == ""
+    assert space_value == ""
+    assert date_value == date.today().isoformat()
+
+
+def test_escape_on_the_space_field_also_cancels():
+    """@sdoc[REQ-FUNC-010]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#space-input", Input).focus()
+            await pilot.press("escape")
+            return app.state.tasks, app.focused
+
+    tasks, focused = run(scenario())
+    assert tasks == []
+    assert isinstance(focused, ListView)
+
+
+def test_escape_on_the_date_field_also_cancels():
+    """@sdoc[REQ-FUNC-010]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#date-input", Input).focus()
+            await pilot.press("up")
+            await pilot.press("escape")
+            return app.state.tasks, app.focused
+
+    tasks, focused = run(scenario())
+    assert tasks == []
+    assert isinstance(focused, ListView)
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):

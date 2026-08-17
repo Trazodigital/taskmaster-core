@@ -5,6 +5,7 @@
 @sdoc[REQ-FUNC-007]
 @sdoc[REQ-FUNC-008]
 @sdoc[REQ-FUNC-009]
+@sdoc[REQ-FUNC-010]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
@@ -100,6 +101,7 @@ class TaskmasterApp(App):
         ("f", "cycle_filter", "Cycle filter"),
         ("v", "cycle_date_view", "Cycle date view"),
         ("?", "show_help", "Show help"),
+        ("escape", "cancel_add_form", "Cancel"),
     ]
 
     CSS = """
@@ -151,6 +153,23 @@ class TaskmasterApp(App):
     def action_show_help(self) -> None:
         """@sdoc[REQ-FUNC-007]"""
         self.push_screen(WelcomeScreen())
+
+    def action_cancel_add_form(self) -> None:
+        """@sdoc[REQ-FUNC-010]
+
+        Only acts while one of the three add-form fields has focus — escape
+        while the task list already has focus has nothing to cancel.
+        """
+        if self.focused is None or self.focused.id not in (
+            "task-input",
+            "space-input",
+            "date-input",
+        ):
+            return
+        self.query_one("#task-input", Input).value = ""
+        self.query_one("#space-input", Input).value = ""
+        self.query_one("#date-input", Input).value = date.today().isoformat()
+        self.query_one("#task-list", ListView).focus()
 
     def action_add_task(self) -> None:
         """@sdoc[REQ-FUNC-001]
