@@ -1,11 +1,13 @@
 """
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
 
 import logging
+from datetime import date, timedelta
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -17,6 +19,25 @@ from ui.state import TaskmasterState
 
 DEFAULT_STORE_PATH = Path.home() / ".local" / "share" / "taskmaster" / "tasks.json"
 DEFAULT_LOG_PATH = Path.home() / ".local" / "share" / "taskmaster" / "taskmaster.log"
+
+
+class DateInput(Input):
+    """A single-line date field steppable by day with up/down.
+
+    @sdoc[REQ-FUNC-006]
+    """
+
+    BINDINGS = [
+        ("up", "step_date(1)", "Later"),
+        ("down", "step_date(-1)", "Earlier"),
+    ]
+
+    def action_step_date(self, days: int) -> None:
+        try:
+            current = date.fromisoformat(self.value)
+        except ValueError:
+            current = date.today()
+        self.value = (current + timedelta(days=days)).isoformat()
 
 
 class TaskmasterApp(App):
@@ -60,6 +81,8 @@ class TaskmasterApp(App):
 
     def compose(self) -> ComposeResult:
         yield Input(placeholder="add a task", id="task-input")
+        yield Input(placeholder="space (optional)", id="space-input")
+        yield DateInput(value=date.today().isoformat(), id="date-input")
         yield ListView(id="task-list")
 
     def on_mount(self) -> None:
@@ -80,11 +103,24 @@ class TaskmasterApp(App):
         self.query_one("#task-input", Input).focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """@sdoc[REQ-FUNC-001]"""
-        text = event.value
+        """@sdoc[REQ-FUNC-001]
+        @sdoc[REQ-FUNC-006]
+
+        Fires on Enter from any of the three fields (text/space/date), so it
+        always reads all three current values rather than just the field
+        that triggered submission.
+        """
+        text_input = self.query_one("#task-input", Input)
+        space_input = self.query_one("#space-input", Input)
+        date_input = self.query_one("#date-input", Input)
+        text = text_input.value
         if text:
-            self.state.add_task(text)
-            event.input.value = ""
+            self.state.add_task(
+                text, space=space_input.value, due_date=date_input.value
+            )
+            text_input.value = ""
+            space_input.value = ""
+            date_input.value = date.today().isoformat()
             self._refresh_list()
         self.query_one("#task-list", ListView).focus()
 

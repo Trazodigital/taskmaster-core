@@ -65,6 +65,14 @@ Source: `docs/requirements/filter-by-space.md`
 |---|---|---|
 | REQ-FUNC-004 | invariant ? | The user SHALL be able to tag a task with a space via the existing add-task input and view only the tasks in one space at a time through taskmaster-app. |
 
+## Structured-add-form feature requirements
+
+Source: `docs/requirements/structured-add-form.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-006 | invariant ? | The user SHALL enter a task's text, space, and due date through three dedicated fields when adding a task, with the date field pre-filled to the current date and adjustable a day at a time via the up and down keys. |
+
 ## Toggle-task feature requirements
 
 Source: `docs/requirements/toggle-task.md`
@@ -75,7 +83,7 @@ Source: `docs/requirements/toggle-task.md`
 
 ---
 
-27 requirement(s). `Derived from`: 21 declared, 6 inferred (marked `?`), 0 undetermined.
+28 requirement(s). `Derived from`: 21 declared, 7 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

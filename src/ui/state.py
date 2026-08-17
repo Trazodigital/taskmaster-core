@@ -4,6 +4,7 @@
 @sdoc[REQ-FUNC-003]
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
+@sdoc[REQ-FUNC-006]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-006]
 @sdoc[REQ-ARCH-008]
@@ -17,11 +18,11 @@ from datetime import date
 
 from tasks.model import (
     Task,
+    build_task,
     by_space,
     distinct_spaces,
     due_this_week,
     due_today,
-    new_task,
     overdue,
     toggle_done,
 )
@@ -81,13 +82,19 @@ class TaskmasterState:
         current = _DATE_VIEW_CYCLE.index(self.active_date_view)
         self.active_date_view = _DATE_VIEW_CYCLE[(current + 1) % len(_DATE_VIEW_CYCLE)]
 
-    def add_task(self, text: str) -> SaveOutcome:
-        """@sdoc[REQ-FUNC-001]"""
+    def add_task(
+        self, text: str, *, space: str = "", due_date: str = ""
+    ) -> SaveOutcome:
+        """@sdoc[REQ-FUNC-001]
+        @sdoc[REQ-FUNC-006]
+        """
         return self._save(
             req_uid="REQ-FUNC-001",
             start_message="add_task started",
             end_message="add_task completed",
-            mutate=lambda: self.tasks.append(new_task(text)),
+            mutate=lambda: self.tasks.append(
+                build_task(text=text, space=space, due_date=due_date)
+            ),
         )
 
     def toggle_task(self, visible_index: int) -> SaveOutcome:
