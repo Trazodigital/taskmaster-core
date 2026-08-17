@@ -9,6 +9,7 @@
 @sdoc[REQ-ARCH-006]
 @sdoc[REQ-ARCH-008]
 @sdoc[REQ-ARCH-009]
+@sdoc[REQ-ARCH-018]
 """
 
 import logging
@@ -56,6 +57,7 @@ class TaskmasterState:
         load_result = repository.load()
         self.tasks: list[Task] = load_result.tasks
         self._fingerprint = load_result.fingerprint
+        self.load_error = load_result.error
         self.active_space: str | None = None
         self.active_date_view: str | None = None
 

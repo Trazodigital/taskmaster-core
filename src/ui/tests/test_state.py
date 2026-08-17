@@ -5,6 +5,7 @@
 @sdoc[REQ-FUNC-004]
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
+@sdoc[REQ-ARCH-018]
 """
 
 import json
@@ -12,7 +13,38 @@ import logging
 from datetime import date, timedelta
 
 from storage.in_memory_repository import InMemoryRepository
+from tasks.repository import LoadResult, SaveResult
 from ui.state import TaskmasterState
+
+
+class _ErroringRepository:
+    """A repository whose store content could not be parsed on load.
+
+    @sdoc[REQ-ARCH-018]
+    """
+
+    def load(self) -> LoadResult:
+        return LoadResult(
+            tasks=[], fingerprint=None, error="store content is not valid JSON"
+        )
+
+    def save(self, tasks, fingerprint) -> SaveResult:
+        raise AssertionError("save must never be called after an unreadable load")
+
+
+def test_state_exposes_the_load_error_when_the_store_is_unreadable():
+    """@sdoc[REQ-ARCH-018]"""
+    state = TaskmasterState(_ErroringRepository())
+
+    assert state.load_error == "store content is not valid JSON"
+    assert state.tasks == []
+
+
+def test_state_has_no_load_error_on_a_normal_load():
+    """@sdoc[REQ-ARCH-018]"""
+    state = TaskmasterState(InMemoryRepository())
+
+    assert state.load_error is None
 
 
 def test_add_task_appends_and_saves_through_the_repository():

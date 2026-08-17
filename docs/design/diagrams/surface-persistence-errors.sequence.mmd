@@ -1,0 +1,20 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    box storage
+    participant adapter as JsonFileRepository
+    end
+
+    Note over app: as shipped, TaskRepository's error signals are read but never acted on
+
+    user->>app: launch the application, store content unparseable
+    app->>adapter: load
+    adapter-->>app: unreadable store error
+    app->>app: report the error and stop, never presenting a task list
+
+    user->>app: add, toggle, or delete a task, store changed externally since load
+    app->>adapter: save request with the held fingerprint
+    adapter-->>app: external change detected, nothing written
+    app->>app: report the external change to the user instead of showing the change as saved
