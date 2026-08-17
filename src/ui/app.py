@@ -1,5 +1,6 @@
 """
 @sdoc[REQ-FUNC-001]
+@sdoc[REQ-FUNC-005]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
@@ -29,6 +30,7 @@ class TaskmasterApp(App):
         ("space", "toggle_task", "Toggle done"),
         ("d", "delete_task", "Delete task"),
         ("f", "cycle_filter", "Cycle filter"),
+        ("v", "cycle_date_view", "Cycle date view"),
     ]
 
     def __init__(
@@ -84,6 +86,11 @@ class TaskmasterApp(App):
     def action_cycle_filter(self) -> None:
         """@sdoc[REQ-FUNC-004]"""
         self.state.cycle_filter()
+        self._refresh_list()
+
+    def action_cycle_date_view(self) -> None:
+        """@sdoc[REQ-FUNC-005]"""
+        self.state.cycle_date_view()
         self._refresh_list()
 
     def _act_on_selected(self, action) -> None:
