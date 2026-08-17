@@ -2,6 +2,7 @@
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-003]
+@sdoc[REQ-FUNC-004]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-006]
 @sdoc[REQ-ARCH-008]
@@ -12,7 +13,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 
-from tasks.model import Task, new_task, toggle_done
+from tasks.model import Task, by_space, distinct_spaces, new_task, toggle_done
 from tasks.repository import TaskRepository
 from ui.logging_events import emit
 
@@ -35,6 +36,20 @@ class TaskmasterState:
         load_result = repository.load()
         self.tasks: list[Task] = load_result.tasks
         self._fingerprint = load_result.fingerprint
+        self.active_space: str | None = None
+
+    @property
+    def visible_tasks(self) -> list[Task]:
+        """@sdoc[REQ-FUNC-004]"""
+        if self.active_space is None:
+            return self.tasks
+        return by_space(self.tasks, self.active_space)
+
+    def cycle_filter(self) -> None:
+        """@sdoc[REQ-FUNC-004]"""
+        cycle: list[str | None] = [None, *distinct_spaces(self.tasks)]
+        current = cycle.index(self.active_space) if self.active_space in cycle else 0
+        self.active_space = cycle[(current + 1) % len(cycle)]
 
     def add_task(self, text: str) -> SaveOutcome:
         """@sdoc[REQ-FUNC-001]"""
@@ -45,10 +60,17 @@ class TaskmasterState:
             mutate=lambda: self.tasks.append(new_task(text)),
         )
 
-    def toggle_task(self, index: int) -> SaveOutcome:
-        """@sdoc[REQ-FUNC-002]"""
+    def toggle_task(self, visible_index: int) -> SaveOutcome:
+        """@sdoc[REQ-FUNC-002]
+
+        `visible_index` is a position in `visible_tasks` (REQ-FUNC-004), not
+        in the full `tasks` list — a filtered view and the full list can
+        disagree on where a task sits, so the caller never resolves this
+        itself.
+        """
 
         def mutate() -> None:
+            index = self._real_index(visible_index)
             self.tasks[index] = toggle_done(self.tasks[index])
 
         return self._save(
@@ -58,14 +80,28 @@ class TaskmasterState:
             mutate=mutate,
         )
 
-    def delete_task(self, index: int) -> SaveOutcome:
-        """@sdoc[REQ-FUNC-003]"""
+    def delete_task(self, visible_index: int) -> SaveOutcome:
+        """@sdoc[REQ-FUNC-003]
+
+        `visible_index` is a position in `visible_tasks`; see `toggle_task`.
+        """
         return self._save(
             req_uid="REQ-FUNC-003",
             start_message="delete_task started",
             end_message="delete_task completed",
-            mutate=lambda: self.tasks.pop(index),
+            mutate=lambda: self.tasks.pop(self._real_index(visible_index)),
         )
+
+    def _real_index(self, visible_index: int) -> int:
+        """@sdoc[REQ-FUNC-004]
+
+        Translates a position in the filtered `visible_tasks` view back to
+        its position in the full `tasks` list, by object identity — two
+        tasks can be equal by value (same text/done/space), so `==`-based
+        lookup could resolve to the wrong one.
+        """
+        selected = self.visible_tasks[visible_index]
+        return next(i for i, task in enumerate(self.tasks) if task is selected)
 
     def _save(
         self, *, req_uid: str, start_message: str, end_message: str, mutate

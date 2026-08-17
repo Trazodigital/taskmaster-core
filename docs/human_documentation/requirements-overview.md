@@ -49,6 +49,14 @@ Source: `docs/requirements/delete-task.md`
 |---|---|---|
 | REQ-FUNC-003 | invariant ? | The user SHALL be able to remove an existing task through taskmaster-app and have the change persisted through TaskRepository. |
 
+## Filter-by-space feature requirements
+
+Source: `docs/requirements/filter-by-space.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-004 | invariant ? | The user SHALL be able to tag a task with a space via the existing add-task input and view only the tasks in one space at a time through taskmaster-app. |
+
 ## Toggle-task feature requirements
 
 Source: `docs/requirements/toggle-task.md`
@@ -59,7 +67,7 @@ Source: `docs/requirements/toggle-task.md`
 
 ---
 
-25 requirement(s). `Derived from`: 21 declared, 4 inferred (marked `?`), 0 undetermined.
+26 requirement(s). `Derived from`: 21 declared, 5 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

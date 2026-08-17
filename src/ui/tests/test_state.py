@@ -2,6 +2,7 @@
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-002]
 @sdoc[REQ-FUNC-003]
+@sdoc[REQ-FUNC-004]
 """
 
 import json
@@ -152,3 +153,74 @@ def test_delete_task_emits_start_and_end_log_events(caplog):
     assert [e["event_type"] for e in events] == ["start", "end"]
     for e in events:
         assert e["req_uid"] == "REQ-FUNC-003"
+
+
+def test_visible_tasks_shows_everything_with_no_active_filter():
+    """@sdoc[REQ-FUNC-004]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread @home")
+    state.add_task("ship the release @work")
+
+    assert [t.text for t in state.visible_tasks] == ["buy bread", "ship the release"]
+
+
+def test_cycle_filter_advances_through_distinct_spaces_then_wraps_to_all():
+    """@sdoc[REQ-FUNC-004]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread @home")
+    state.add_task("ship the release @work")
+
+    state.cycle_filter()
+    assert state.active_space == "home"
+    assert [t.text for t in state.visible_tasks] == ["buy bread"]
+
+    state.cycle_filter()
+    assert state.active_space == "work"
+    assert [t.text for t in state.visible_tasks] == ["ship the release"]
+
+    state.cycle_filter()
+    assert state.active_space is None
+    assert [t.text for t in state.visible_tasks] == ["buy bread", "ship the release"]
+
+
+def test_toggle_task_with_an_active_filter_toggles_the_right_task():
+    """@sdoc[REQ-FUNC-004]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread @home")
+    state.add_task("ship the release @work")
+    state.cycle_filter()  # active_space = "home"
+    state.cycle_filter()  # active_space = "work", visible_tasks = ["ship the release"]
+
+    # index 0 in the FILTERED view is self.tasks[1] in the full list — must
+    # resolve there, not to whatever naively sits at self.tasks[0]
+    state.toggle_task(0)
+
+    assert [t.done for t in state.tasks] == [False, True]
+
+
+def test_delete_task_with_an_active_filter_deletes_the_right_task():
+    """@sdoc[REQ-FUNC-004]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("buy bread @home")
+    state.add_task("ship the release @work")
+    state.cycle_filter()  # active_space = "home"
+    state.cycle_filter()  # active_space = "work", visible_tasks = ["ship the release"]
+
+    state.delete_task(0)
+
+    assert [t.text for t in state.tasks] == ["buy bread"]
+
+
+def test_cycle_filter_with_no_spaces_stays_on_all():
+    """@sdoc[REQ-FUNC-004]"""
+    repo = InMemoryRepository()
+    state = TaskmasterState(repo)
+    state.add_task("water the plants")
+
+    state.cycle_filter()
+
+    assert state.active_space is None
