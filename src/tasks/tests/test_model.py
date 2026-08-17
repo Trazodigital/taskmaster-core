@@ -14,6 +14,7 @@ from tasks.model import (
     distinct_spaces,
     due_this_week,
     due_today,
+    is_overdue,
     new_task,
     overdue,
     toggle_done,
@@ -154,6 +155,38 @@ def test_overdue_matches_the_glossary_definition():
     result = overdue([late_task, done_late_task, future_task], today)
 
     assert result == [late_task]
+
+
+def test_is_overdue_is_true_for_a_not_done_task_past_its_due_date():
+    """@sdoc[REQ-FUNC-009]"""
+    today = date(2026, 8, 17)
+    task = new_task("ship the release !2026-08-16")
+
+    assert is_overdue(task, today) is True
+
+
+def test_is_overdue_is_false_for_a_done_task_past_its_due_date():
+    """@sdoc[REQ-FUNC-009]"""
+    today = date(2026, 8, 17)
+    task = toggle_done(new_task("ship the release !2026-08-16"))
+
+    assert is_overdue(task, today) is False
+
+
+def test_is_overdue_is_false_for_a_task_with_no_due_date():
+    """@sdoc[REQ-FUNC-009]"""
+    today = date(2026, 8, 17)
+    task = new_task("buy bread")
+
+    assert is_overdue(task, today) is False
+
+
+def test_is_overdue_is_false_for_a_task_due_today_or_later():
+    """@sdoc[REQ-FUNC-009]"""
+    today = date(2026, 8, 17)
+    task = new_task("buy bread !2026-08-17")
+
+    assert is_overdue(task, today) is False
 
 
 def test_date_filters_are_deterministic():

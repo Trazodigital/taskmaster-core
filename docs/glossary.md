@@ -72,6 +72,11 @@ Rules the parser enforces:
 **Definition:** The state of a task that is not complete and whose due date falls within the next seven days counting from the current date, inclusive of today.
 **Examples:** on 2026-08-17, a task due 2026-08-17 through 2026-08-23 is due this week; one due 2026-08-24 is not.
 
+## in progress
+
+**Definition:** The state of a task that is not complete and is not overdue.
+**Examples:** a task due tomorrow; a task with no due date at all.
+
 ## store
 
 **Definition:** The single local file in which task records are persisted between runs of the application.

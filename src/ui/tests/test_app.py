@@ -7,6 +7,7 @@
 @sdoc[REQ-FUNC-006]
 @sdoc[REQ-FUNC-007]
 @sdoc[REQ-FUNC-008]
+@sdoc[REQ-FUNC-009]
 """
 
 import asyncio
@@ -376,6 +377,53 @@ def test_status_line_shows_both_the_active_space_and_date_view_together():
     text = run(scenario())
     assert "space: home" in text
     assert "view: today" in text
+
+
+def test_overdue_task_gets_the_overdue_css_class():
+    """@sdoc[REQ-FUNC-009]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("pay the rent", due_date="2020-01-01")
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            label = app.query_one(ListView).query_one(Label)
+            return label.has_class("task-overdue"), label.has_class("task-done")
+
+    has_overdue, has_done = run(scenario())
+    assert has_overdue is True
+    assert has_done is False
+
+
+def test_done_task_gets_the_done_css_class_even_when_its_due_date_is_past():
+    """@sdoc[REQ-FUNC-009]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("pay the rent", due_date="2020-01-01")
+        app.state.toggle_task(0)
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            label = app.query_one(ListView).query_one(Label)
+            return label.has_class("task-done"), label.has_class("task-overdue")
+
+    has_done, has_overdue = run(scenario())
+    assert has_done is True
+    assert has_overdue is False
+
+
+def test_pending_not_overdue_task_gets_the_in_progress_css_class():
+    """@sdoc[REQ-FUNC-009]"""
+
+    async def scenario():
+        app = TaskmasterApp(repository=InMemoryRepository())
+        app.state.add_task("buy bread")
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            label = app.query_one(ListView).query_one(Label)
+            return label.has_class("task-in-progress")
+
+    assert run(scenario()) is True
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):

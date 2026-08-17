@@ -81,6 +81,14 @@ Source: `docs/requirements/structured-add-form.md`
 |---|---|---|
 | REQ-FUNC-006 | invariant ? | The user SHALL enter a task's text, space, and due date through three dedicated fields when adding a task, with the date field pre-filled to the current date and adjustable a day at a time via the up and down keys. |
 
+## Task-status-colors feature requirements
+
+Source: `docs/requirements/task-status-colors.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-009 | invariant ? | taskmaster-app SHALL render each visible task in red when overdue, in green when done, and in a distinct color when in progress. |
+
 ## Toggle-task feature requirements
 
 Source: `docs/requirements/toggle-task.md`
@@ -99,7 +107,7 @@ Source: `docs/requirements/welcome-screen.md`
 
 ---
 
-30 requirement(s). `Derived from`: 21 declared, 9 inferred (marked `?`), 0 undetermined.
+31 requirement(s). `Derived from`: 21 declared, 10 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 
