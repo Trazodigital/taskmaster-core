@@ -1,0 +1,26 @@
+# Review ownership. Required by code-review-gate --architecture-only, which
+# resolves the approvers for the architecture layer from this file.
+#
+# ONE owner, on purpose, and it is a deliberate deviation from the four-eyes
+# standing rule — see FRAMEWORK_FEEDBACK.md § FB-005, where it is recorded and
+# marked for removal.
+#
+# GitHub never requests a review from the pull request author (the API rejects
+# it with 422 "Review cannot be requested from pull request author"), so a
+# single-owner line requests nobody whenever that owner opens the PR. That is
+# the intended effect while this project has one available maintainer: the
+# review requirement stays declared on the branch, and enforce_admins is false
+# so the maintainer can land work.
+#
+# The previous file listed @MFei8ht and @abecerriltrazodigital so that whoever
+# authored a PR, the other was auto-requested. Restore that line — and set
+# enforce_admins back to true — the moment a second reviewer is available.
+# That is the whole revert.
+#
+# USER_MANUAL.md § 9.4 declares three architecture-owned paths, not one. The
+# tech-stack files are human-owned configuration (AGENTS.md § "Ownership
+# boundaries" forbids the agent from editing them), so a change there is an
+# architecture decision and needs the same approval as docs/architecture/.
+docs/architecture/       @MFei8ht
+tech-stack.yaml          @MFei8ht
+tech-stack-integrations/ @MFei8ht
