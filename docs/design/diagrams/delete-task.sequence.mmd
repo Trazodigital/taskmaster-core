@@ -1,0 +1,11 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+    participant port as TaskRepository
+
+    user->>app: delete key, on the selected task
+    app->>port: save request with the reduced task list and the held fingerprint
+    port-->>app: save outcome, either confirmed with a new fingerprint or an external change
+    app-->>user: the updated list, or a report that nothing was written

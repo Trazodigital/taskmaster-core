@@ -1,6 +1,7 @@
 """
 @sdoc[REQ-FUNC-001]
 @sdoc[REQ-FUNC-002]
+@sdoc[REQ-FUNC-003]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-006]
 @sdoc[REQ-ARCH-008]
@@ -55,6 +56,15 @@ class TaskmasterState:
             start_message="toggle_task started",
             end_message="toggle_task completed",
             mutate=mutate,
+        )
+
+    def delete_task(self, index: int) -> SaveOutcome:
+        """@sdoc[REQ-FUNC-003]"""
+        return self._save(
+            req_uid="REQ-FUNC-003",
+            start_message="delete_task started",
+            end_message="delete_task completed",
+            mutate=lambda: self.tasks.pop(index),
         )
 
     def _save(

@@ -41,6 +41,14 @@ Source: `docs/requirements/baseline.md`
 | REQ-ARCH-021 | invariant | Task records SHALL be written to a temporary file and then renamed over the store, so that an interrupted write leaves the previous content intact. |
 | REQ-NFR-PERF-001 | invariant ? | The application SHALL complete its startup load and present the first view within a bounded time when the store holds one thousand tasks. |
 
+## Delete-task feature requirements
+
+Source: `docs/requirements/delete-task.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-003 | invariant ? | The user SHALL be able to remove an existing task through taskmaster-app and have the change persisted through TaskRepository. |
+
 ## Toggle-task feature requirements
 
 Source: `docs/requirements/toggle-task.md`
@@ -51,7 +59,7 @@ Source: `docs/requirements/toggle-task.md`
 
 ---
 
-24 requirement(s). `Derived from`: 21 declared, 3 inferred (marked `?`), 0 undetermined.
+25 requirement(s). `Derived from`: 21 declared, 4 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 
