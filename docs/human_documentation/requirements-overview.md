@@ -12,6 +12,14 @@ Source: `docs/requirements/active-view-indicator.md`
 |---|---|---|
 | REQ-FUNC-008 | invariant ? | taskmaster-app SHALL display the active space and the active date view components of the current filter, updated whenever either is cycled. |
 
+## Add-form-keyboard-controls feature requirements
+
+Source: `docs/requirements/add-form-keyboard-controls.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-010 | — | taskmaster-app SHALL, when the user presses escape while any of the add form's three fields has focus, clear the text and space fields, reset the date field to the current date, and return focus to the task list without creating a task. |
+
 ## Add-task feature requirements
 
 Source: `docs/requirements/add-task.md`
@@ -107,7 +115,7 @@ Source: `docs/requirements/welcome-screen.md`
 
 ---
 
-31 requirement(s). `Derived from`: 21 declared, 10 inferred (marked `?`), 0 undetermined.
+32 requirement(s). `Derived from`: 21 declared, 10 inferred (marked `?`), 1 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

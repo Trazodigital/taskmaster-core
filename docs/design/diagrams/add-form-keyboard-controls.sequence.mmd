@@ -1,0 +1,10 @@
+sequenceDiagram
+    actor user
+    box ui
+    participant app as taskmaster-app
+    end
+
+    user->>app: text typed into any of the three fields
+    user->>app: escape, on any of the three fields
+    app->>app: clear the text and space fields, reset the date field to today
+    app-->>user: focus returns to the task list, no task created
