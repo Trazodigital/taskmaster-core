@@ -24,7 +24,10 @@ class TaskmasterApp(App):
     @sdoc[REQ-ARCH-001]
     """
 
-    BINDINGS = [("a", "add_task", "Add task")]
+    BINDINGS = [
+        ("a", "add_task", "Add task"),
+        ("space", "toggle_task", "Toggle done"),
+    ]
 
     def __init__(
         self,
@@ -68,8 +71,21 @@ class TaskmasterApp(App):
         field.value = ""
         self._refresh_list()
 
+    def action_toggle_task(self) -> None:
+        """@sdoc[REQ-FUNC-002]"""
+        task_list = self.query_one("#task-list", ListView)
+        index = task_list.index
+        if index is None:
+            return
+        self.state.toggle_task(index)
+        self._refresh_list()
+
     def _refresh_list(self) -> None:
         task_list = self.query_one("#task-list", ListView)
         task_list.clear()
         for task in self.state.tasks:
-            task_list.append(ListItem(Label(task.text)))
+            mark = "x" if task.done else " "
+            # markup=False: task text is arbitrary user input, never
+            # interpreted as Rich markup — REQ-ARCH-018's untrusted-input
+            # posture applies here too, not just to the stored JSON.
+            task_list.append(ListItem(Label(f"[{mark}] {task.text}", markup=False)))
