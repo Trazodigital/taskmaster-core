@@ -4,6 +4,14 @@ Every requirement in the corpus, grouped by the file it is authored in.
 Generated from the corpus by `check-traceability.sh --report --overview` —
 do not edit by hand.
 
+## Add-task feature requirements
+
+Source: `docs/requirements/add-task.md`
+
+| UID | Derived from | Statement |
+|---|---|---|
+| REQ-FUNC-001 | invariant ? | The user SHALL be able to enter a task's text through taskmaster-app and have it added to the task list and persisted through TaskRepository. |
+
 ## Baseline architecture requirements
 
 Source: `docs/requirements/baseline.md`
@@ -35,7 +43,7 @@ Source: `docs/requirements/baseline.md`
 
 ---
 
-22 requirement(s). `Derived from`: 21 declared, 1 inferred (marked `?`), 0 undetermined.
+23 requirement(s). `Derived from`: 21 declared, 2 inferred (marked `?`), 0 undetermined.
 
 An inferred value was read from the statement's shape, not from the entry. Add a `DERIVED_FROM:` line to record it as fact.
 

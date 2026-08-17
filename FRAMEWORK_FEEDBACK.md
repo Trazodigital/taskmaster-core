@@ -120,6 +120,332 @@ proposal that was never run should say so.
 
 <!-- Newest first. -->
 
+### FB-008 — `verification-suite-execution` resolves `gates.min_coverage_percent` and two other keys the config schema forbids from ever existing
+
+- **Date:** 2026-08-17
+- **Framework version:** v3.0.0 @ 978cd9e83ed4b3ebffae06b5ccedd393b39528f2
+- **Severity:** high
+- **Class:** C4
+- **Status:** open
+
+**What the framework claims**
+
+`skills/verification-suite-execution/SKILL.md:38-43` (step 1, "Resolve inputs via the `tech-stack`
+skill") requires resolving from `build-pipeline.yaml`:
+
+```
+- gates.min_coverage_percent
+- gates.on_suite_failure, gates.on_artifact_publish_failure, gates.on_coverage_regression
+```
+
+Step 5 hard-gates on the first ("Enforce the coverage gate... Compare the reported coverage
+percentage against `build-pipeline.yaml § gates.min_coverage_percent`"), step 3 relies on the
+second, step 4 on the third, and the `Hard-gate conditions` list at `:98` names
+"**Coverage regression.** Observed coverage is below `build-pipeline.yaml § gates.min_coverage_percent`."
+as one of the conditions this skill MUST hard-gate on.
+
+**What actually happens**
+
+The product's `build-pipeline.yaml § gate` (singular, not `gates`) and its own JSON Schema at
+`tech-stack-integrations/build-pipeline.schema.json` agree with each other and disagree with the
+skill:
+
+```
+$ python3 -c "
+import json
+d = json.load(open('tech-stack-integrations/build-pipeline.schema.json'))
+print(d['additionalProperties'])                 # False — no key beyond the required set, anywhere
+print(list(d['properties'].keys()))              # [...,'gate'] — no 'gates' key exists
+print(d['properties']['gate'])
+"
+False
+[..., 'gate']
+{'additionalProperties': False,
+ 'required': ['on_suite_failure', 'on_missing_artifact', 'on_branch_protection_bypass',
+              'on_missing_review', 'on_nfr_regression', 'on_missing_po_approval'],
+ ...}
+```
+
+Two independent breaks, not one:
+
+1. The parent key is `gate` (singular) in both the shipped template and its schema;
+   `verification-suite-execution` reads `gates` (plural) throughout. The schema's root
+   `additionalProperties: False` means `gates` can never legally exist alongside `gate` in any
+   product's config — this is not a value the product forgot to set, it is a key name the schema
+   forbids outright.
+2. Even granting the typo and reading `gate` instead, none of `min_coverage_percent`,
+   `on_artifact_publish_failure`, or `on_coverage_regression` is among the schema's six allowed
+   keys (`on_suite_failure`, `on_missing_artifact`, `on_branch_protection_bypass`,
+   `on_missing_review`, `on_nfr_regression`, `on_missing_po_approval`), and
+   `additionalProperties: False` forbids adding them.
+
+Per the `tech-stack` skill's own resolution rule (`skills/tech-stack/SKILL.md:44`, "Missing required
+key... hard-gate"), step 1 of `verification-suite-execution` cannot complete for ANY product
+validating against the framework's own schema — the coverage-gate machinery this skill describes
+(step 5, plus the matching hard-gate condition) has no config surface it could ever legally read.
+
+**Reproduction**
+
+```bash
+python3 -c "
+import json
+d = json.load(open('tech-stack-integrations/build-pipeline.schema.json'))
+assert d['additionalProperties'] is False
+assert 'gates' not in d['properties']
+assert set(d['properties']['gate']['properties']) == {
+    'on_suite_failure','on_missing_artifact','on_branch_protection_bypass',
+    'on_missing_review','on_nfr_regression','on_missing_po_approval',
+}
+print('schema confirms: gates.min_coverage_percent can never exist')
+"
+```
+Runs clean against this product's untouched, human-owned config and schema — no product-specific
+setup needed; any product generated from the same template hits the identical mismatch.
+
+**Verification**
+
+READ (schema) cross-checked against READ (skill text) — both quoted above verbatim, not
+paraphrased. Not run end-to-end inside `verification-suite-execution` itself (no such tooling
+exists to execute; the skill is agent-interpreted prose), but the `tech-stack` resolution rule it
+depends on is unambiguous, and the schema is authoritative per `AGENTS.md § Ownership boundaries`
+("every concrete detail used by a framework skill MUST be resolved from `tech-stack.yaml` or a
+`tech-stack-integrations/*.yaml`").
+
+**Blast radius**
+
+Every product on this framework, unconditionally, the first time `verification-suite-execution`'s
+coverage-gate step is followed literally — not product-specific, since the schema forbidding
+`gates`/`min_coverage_percent`/`on_artifact_publish_failure`/`on_coverage_regression` is itself
+framework-shipped, not something any product author wrote.
+
+**Impact on this product**
+
+Discovered before Phase 4 execution on `feature/REQ-FUNC-001-add-task`, while resolving inputs per
+the skill's own step 1. Coverage was still measured and reported (via `pytest --cov`, which the
+declared `test-unit` suite already runs), but the coverage-vs-threshold comparison in step 5 was
+not enforced as a hard-gate, since no legally expressible threshold exists to compare against —
+inventing one would be fabricating a value the human-owned config never declared, which is exactly
+the failure mode FB-002 already rejected for a different field. `on_suite_failure` (the one field
+that resolves correctly, once read from the schema-correct `gate` singular key) was still enforced
+in full for every suite.
+
+**Workaround applied**
+
+`none` in configuration. Operationally: suite failures were still hard-gated via the correctly
+resolving `gate.on_suite_failure`; the coverage number was measured and reported for visibility
+without a threshold comparison, analogous to how `check-branch-protection.sh` reports DEGRADED
+rather than inventing enforcement that is not configured.
+
+**Proposed fix** *(optional)*
+
+Not tested; proposal only. Either add `min_coverage_percent`, `on_artifact_publish_failure`, and
+`on_coverage_regression` to `build-pipeline.schema.json § properties.gate` (and rename references
+consistently — pick one of `gate` or `gates`, not both), or rewrite
+`verification-suite-execution/SKILL.md` step 1/5 to read the six keys the schema actually declares
+and drop the coverage-threshold gate entirely if it was never meant to be product-configurable.
+Either fix must touch the schema and the skill together — fixing only one leaves the other wrong.
+
+---
+
+### FB-007 — `is_test_file()` matches by path glob with no extension guard, so compiled `.pyc` bytecode under `tests/` gets scanned as source and corrupts `--check-logging` via an embedded NUL byte
+
+- **Date:** 2026-08-17
+- **Framework version:** v3.0.0 @ 978cd9e83ed4b3ebffae06b5ccedd393b39528f2
+- **Severity:** medium
+- **Class:** C4
+- **Status:** open
+
+**What the framework claims**
+
+`scripts/check-traceability.sh:360-365` defines `is_test_file()`:
+
+```bash
+is_test_file() {
+  case "$1" in
+    */tests/*|*/test/*|*_test.*|*.test.*|*.spec.*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+```
+
+Used by `test_files_for()` (`:962-975`) to decide which files under `markers.scan_paths` (`src`,
+`tests`) are read as test source for the `--check-logging` structured-logging assertion scan. The
+function's name and role — identifying test *source* files — imply it selects source code, not
+arbitrary path matches.
+
+**What actually happens**
+
+The pattern matches on path shape alone, with no extension check. `python -m pytest` writes compiled
+bytecode to `src/<module>/tests/__pycache__/*.pyc`, and `*/tests/*` matches that path exactly the
+same as it matches `src/ui/tests/test_state.py`. Python's compiled bytecode embeds docstrings as
+string constants in its constant pool, so a `.pyc` compiled from a file carrying
+`"""@sdoc[REQ-FUNC-001]"""` contains that literal byte sequence, and `grep -qF "$marker" "$f"`
+matches it. `test_files_for` then returns the `.pyc` alongside the real `.py` test file, and
+`check_logging()`'s `content=$(... cat "$tf" ...)` concatenates the *binary* file into a bash
+variable via command substitution — which truncates at the first embedded NUL byte, corrupting
+whatever text came after it in the concatenation.
+
+```
+$ QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging
+.../check-traceability.sh: line 1008: warning: command substitution: ignored null byte in input
+check-traceability.sh: hard-gate: REQ REQ-FUNC-001: no structured-logging assertion in tests
+  (missing: end error event_type). Add a start/end/error integration test asserting req_uid,
+  or mark the source @no-runtime-events[REQ-FUNC-001].
+```
+
+`src/ui/tests/test_state.py` — one of the files `test_files_for` matched for this UID — contains
+the literal strings `start`, `end`, `error`, `event_type`, `req_uid`, and `correlation_id`
+verbatim, in passing assertions. The failure is not that the assertion is missing; it is that the
+scanner never read it, because an unrelated binary file earlier in the concatenation order
+truncated the stream first.
+
+**Reproduction**
+
+```bash
+# from a working tree with at least one src/<module>/tests/test_*.py carrying an @sdoc marker
+python -m pytest src/                          # writes __pycache__/*.pyc under */tests/*
+QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging
+# reports the UID as missing logging fields that its .py test file actually asserts
+rm -rf src/**/tests/__pycache__
+QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging
+# the false failure for that UID disappears; only genuinely uncovered UIDs remain
+```
+
+**Verification**
+
+RUN. Hit live on this product while verifying `REQ-FUNC-001`'s Phase 3 cycle: the gate reported it
+as missing structured-logging fields its test file demonstrably asserts. First hypothesis was that
+the test itself was wrong; disproved by rereading the test file directly. Traced to
+`test_files_for`'s match set via manual `grep -rlF` reproduction, which showed `.pyc` files present
+in the match set alongside the real `.py` files, then confirmed by clearing `__pycache__` and
+re-running — the false failure disappeared with no code or test change.
+
+**Blast radius**
+
+Every product on this framework, on any local run of `--check-logging` (or any other
+`markers.scan_paths`-driven scan sharing `is_test_file`/`test_files_for`) performed after `pytest`
+has populated `__pycache__` under a co-located `tests/` directory — which `module-as-directory`
+makes the mandatory layout. Does not reach CI: a fresh checkout carries no `__pycache__` (it is
+gitignored, confirmed not tracked in this repo), so the corruption is local-only, but it is the
+default state of any working tree a human or agent has actually run tests in — which is to say,
+almost always, right when `--check-logging` is most likely to be run by hand to check a REQ before
+committing.
+
+**Impact on this product**
+
+One false hard-gate reported for `REQ-FUNC-001` during Phase 3 verification, diagnosed and
+dismissed after tracing it to `__pycache__` contamination rather than a real gap. Cost was
+diagnostic only; nothing was implemented or skipped to work around it.
+
+**Workaround applied**
+
+`none` in the framework. Operationally, `__pycache__` directories under `src/**/tests/` were
+deleted before trusting the gate's output — this is cleanup, not a code or config change, and
+leaves no artifact to remove later.
+
+**Proposed fix** *(optional)*
+
+Not tested; proposal only. Add an extension guard to `is_test_file()` — restrict the match to
+`*.py` (or the language-appropriate extension resolved from `tech-stack.yaml § project.language`)
+before applying the path-shape glob, e.g. `*/tests/*.py|*/test/*.py|*_test.py|...`. This closes the
+class of bug entirely: no binary artifact under a `tests/` path can ever satisfy `is_test_file()`
+again, regardless of what a compiler, formatter, or editor leaves behind there.
+
+---
+
+### FB-006 — `check-traceability.sh --phase verify` has no changeset scoping, so `main` is red from the moment architecture merges until every `REQ-ARCH-*` has code
+
+- **Date:** 2026-08-16
+- **Framework version:** v3.0.0 @ 978cd9e83ed4b3ebffae06b5ccedd393b39528f2
+- **Severity:** medium
+- **Class:** C4
+- **Status:** open
+
+**What the framework claims**
+
+`USER_MANUAL.md:261` and `mermaid-intake`/`sdd-architecture` describe the architecture-then-feature
+flow as normal and expected: architecture merges to `main` carrying requirements with no
+implementation, then features land one at a time, each closing its own slice of marker coverage.
+Nothing in the documentation warns that this sequence produces a red `main` for the entire interval
+between those two events.
+
+**What actually happens**
+
+`scripts/local_dry_CI_run_before_commit.sh` selects the gate set from the branch name alone
+(`arch/*` → reduced set with `check-traceability.sh --phase verify --architecture-only`, marker
+coverage not enforced; anything else → full set with `check-traceability.sh --phase verify
+--check-logging`, marker coverage enforced for the WHOLE corpus). `--phase verify` has no
+`--changeset` flag — that scoping exists only for `--phase apply` (`:863-874`), which
+`tdd-cycle-enforcement` uses per-REQ during Phase 3. The instant the architecture PR merges to
+`main`, `main` is no longer `arch/*`, so it runs the full set, and every `REQ-ARCH-*` (and any
+`REQ-NFR-*`) is reported as missing a test marker and a source marker — because by design, at that
+point, none has been implemented yet.
+
+```
+$ QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging
+check-traceability.sh: hard-gate: 22 REQ(s) without a test marker: REQ-ARCH-001 ... REQ-NFR-PERF-001
+check-traceability.sh: hard-gate: 22 REQ(s) without a source marker: REQ-ARCH-001 ... REQ-NFR-PERF-001
+exit: 1
+```
+
+This is not a transient blip: it persists on every push to `main` until the LAST `REQ-ARCH-*` in
+the corpus finally gets code — which could be many features and a long time later. There is no
+required-status-check configuration issue here (this product already runs DEGRADED per FB-005); the
+finding is that the gate itself has no notion of "architecture landed, implementation in progress,
+partial coverage is expected and not yet a violation".
+
+**Reproduction**
+
+```bash
+# on any branch not matching arch/*, with an architecture-only corpus (no REQ has @sdoc yet)
+QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --phase verify --check-logging
+# hard-gates on every REQ, unconditionally, regardless of how much has actually been implemented
+```
+
+Observed directly on this product: PR #7 merged the architecture to `main`, and the very next CI
+run on `main` (a `push` event, unrelated to the merge itself) failed with exactly this shape —
+`check-module-structure.sh` failing first (3 declared modules, 0 directories — expected, since no
+feature had landed yet), and `check-traceability.sh --phase verify --check-logging` would have
+failed identically the moment module-structure passed.
+
+**Verification**
+
+RUN, twice: once on `main` immediately after PR #7 (GitHub Actions run 31989704000), and again
+locally on `feature/REQ-FUNC-001-add-task` after implementing REQ-FUNC-001, to confirm the failure
+mode is exactly "whole corpus, not changeset" — `check-traceability.sh --phase apply --changeset
+REQ-FUNC-001` passed with 0 violations for the same tree that `--phase verify` (no changeset)
+reported 16 uncovered tests / 8 uncovered src for.
+
+**Blast radius**
+
+Every product on this framework, unconditionally, for the entire span between "architecture merged"
+and "every architecture REQ has code" — which is the framework's own prescribed normal operating
+state for a product under active development, not an edge case.
+
+**Impact on this product**
+
+`main`'s CI has been red since PR #7 merged (2026-08-16) and will stay red, feature by feature,
+until the corpus is fully implemented. No merge is blocked by it (no required status checks are
+configured, per FB-005's DEGRADED enforcement state), but the badge is misleading and would page
+someone incorrectly if status checks were ever turned on before the corpus finishes.
+
+**Workaround applied**
+
+`none`. Discussed with the maintainer and deliberately not worked around: the correct resolution is
+implementing features, which is already the plan, not silencing or reshaping the gate.
+
+**Proposed fix** *(optional)*
+
+Not tested; proposal only. Either (a) add `--changeset` support to `--phase verify` mirroring
+`--phase apply`, so CI on a feature branch can assert full coverage for that PR's REQs while
+tolerating a partially-implemented corpus elsewhere, or (b) give `verify` an explicit
+"in-progress" mode — analogous to `--architecture-only` — that reports true uncovered counts
+without hard-gating on them until an product-declared milestone (e.g., all `REQ-ARCH-*` implemented)
+is reached, the same DEGRADED-not-silent pattern `check-branch-protection.sh` already uses for an
+unenforceable policy.
+
+---
+
 ### FB-005 — the framework grants itself a single-maintainer exception but gives products no way to declare one
 
 - **Date:** 2026-08-16
