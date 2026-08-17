@@ -7,6 +7,7 @@
 @sdoc[REQ-FUNC-009]
 @sdoc[REQ-FUNC-010]
 @sdoc[REQ-ARCH-001]
+@sdoc[REQ-ARCH-018]
 @sdoc[REQ-ARCH-013]
 """
 
@@ -143,6 +144,13 @@ class TaskmasterApp(App):
         yield ListView(id="task-list")
 
     def on_mount(self) -> None:
+        if self.state.load_error is not None:
+            # unreadable store content: report it and stop before ever
+            # refreshing the list or showing the welcome screen — presenting
+            # anything here would be indistinguishable from a legitimately
+            # empty store (REQ-ARCH-017), which REQ-ARCH-018 forbids.
+            self.exit(message=f"Error: {self.state.load_error}", return_code=1)
+            return
         self._refresh_list()
         # the list holds focus, not the input — otherwise every single-key
         # binding below (toggle/delete/cycle-*) is typed into the input as a
@@ -194,13 +202,14 @@ class TaskmasterApp(App):
         date_input = self.query_one("#date-input", Input)
         text = text_input.value
         if text:
-            self.state.add_task(
+            outcome = self.state.add_task(
                 text, space=space_input.value, due_date=date_input.value
             )
             text_input.value = ""
             space_input.value = ""
             date_input.value = date.today().isoformat()
             self._refresh_list()
+            self._report_if_external_change(outcome)
         self.query_one("#task-list", ListView).focus()
 
     def action_toggle_task(self) -> None:
@@ -226,8 +235,24 @@ class TaskmasterApp(App):
         index = task_list.index
         if index is None:
             return
-        action(index)
+        outcome = action(index)
         self._refresh_list()
+        self._report_if_external_change(outcome)
+
+    def _report_if_external_change(self, outcome) -> None:
+        """@sdoc[REQ-FUNC-001]
+        @sdoc[REQ-FUNC-002]
+        @sdoc[REQ-FUNC-003]
+
+        Overrides the status line _refresh_list just wrote — the change
+        stays visible in the task list (already established: state keeps
+        the mutation in memory even when the disk write is rejected), but
+        the user must be told the save itself did not happen.
+        """
+        if outcome.external_change:
+            self.query_one("#filter-status", Static).update(
+                "not saved: the file changed outside the app"
+            )
 
     def _refresh_list(self) -> None:
         """@sdoc[REQ-FUNC-001]

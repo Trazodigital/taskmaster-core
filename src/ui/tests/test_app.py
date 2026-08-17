@@ -9,6 +9,7 @@
 @sdoc[REQ-FUNC-008]
 @sdoc[REQ-FUNC-009]
 @sdoc[REQ-FUNC-010]
+@sdoc[REQ-ARCH-018]
 """
 
 import asyncio
@@ -18,6 +19,7 @@ from datetime import date, timedelta
 from textual.widgets import Input, ListView, Label, Static
 
 from storage.in_memory_repository import InMemoryRepository
+from storage.json_repository import JsonFileRepository
 from ui.app import TaskmasterApp, WelcomeScreen
 
 
@@ -511,6 +513,59 @@ def test_escape_on_the_date_field_also_cancels():
     tasks, focused = run(scenario())
     assert tasks == []
     assert isinstance(focused, ListView)
+
+
+def test_app_exits_without_presenting_a_task_list_on_an_unreadable_store(tmp_path):
+    """@sdoc[REQ-ARCH-018]"""
+    store = tmp_path / "tasks.json"
+    store.write_text("{not valid json", encoding="utf-8")
+    before = store.read_bytes()
+
+    async def scenario():
+        app = TaskmasterApp(repository=JsonFileRepository(store))
+        async with app.run_test():
+            item_count = len(app.query_one("#task-list", ListView))
+        return app.return_code, item_count
+
+    return_code, item_count = run(scenario())
+    assert return_code is not None and return_code != 0
+    assert item_count == 0
+    assert store.read_bytes() == before
+
+
+def test_status_line_reports_an_external_change_when_adding_a_task_fails_to_save():
+    """@sdoc[REQ-FUNC-001]"""
+
+    async def scenario():
+        repo = InMemoryRepository()
+        app = TaskmasterApp(repository=repo)
+        repo.save([], fingerprint=None)  # someone else writes after the app's load
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one("#task-input", Input).value = "buy bread"
+            app.query_one("#task-input", Input).focus()
+            await pilot.press("enter")
+            return str(app.query_one("#filter-status", Static).render())
+
+    assert "not saved" in run(scenario())
+
+
+def test_status_line_reports_an_external_change_when_toggling_fails_to_save():
+    """@sdoc[REQ-FUNC-002]"""
+
+    async def scenario():
+        repo = InMemoryRepository()
+        app = TaskmasterApp(repository=repo)
+        app.state.add_task("buy bread")
+        current = repo.load()
+        repo.save(current.tasks, fingerprint=current.fingerprint)  # external write
+        async with app.run_test() as pilot:
+            await pilot.press("escape")  # dismiss the welcome screen
+            app.query_one(ListView).index = 0
+            await pilot.press("space")
+            return str(app.query_one("#filter-status", Static).render())
+
+    assert "not saved" in run(scenario())
 
 
 def test_app_logs_to_a_file_and_never_to_the_terminal(tmp_path):
