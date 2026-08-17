@@ -1,0 +1,12 @@
+[bandit]
+# build-pipeline.yaml § suites.test-security is framework-fixed at
+# `bandit -r src/ ...` with no --exclude, and module-as-directory
+# (AGENTS.md § Standing rules) requires tests to co-locate inside
+# src/<module>/tests/. Combined, every pytest `assert` in every co-located
+# test file is reported as B101 (assert_used) — 27 findings on this feature
+# alone, none a real issue: B101 exists because `assert` is stripped under
+# `python -O`, which does not apply to pytest's own assertions. Bandit
+# auto-discovers a `.bandit` file by walking the scanned target (see
+# bandit/cli/main.py _get_options_from_ini), so this excludes co-located
+# test directories without touching the locked suite command.
+exclude: */tests/*

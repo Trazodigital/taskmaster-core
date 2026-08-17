@@ -1,0 +1,8 @@
+# Runtime dependencies for the application itself, as opposed to
+# requirements-dev.txt (lint/test/security tooling, declared by
+# tech-stack.yaml § toolchain). Install with:
+#
+#   .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+
+# TUI framework — see docs/adr/0007-textual-as-the-tui-framework.md
+textual==8.2.8

@@ -19,7 +19,14 @@ pytest==8.3.4
 flake8==7.1.1
 
 # suites.test-security -> "bandit -r src/"
-bandit==1.8.0
+# Pinned above 1.8.0: bandit's plugin registration calls
+# test_properties.check_ast_node("Str"), and Python removed ast.Str in 3.12.
+# Every bandit<1.9 plugin using @test.checks("Str") then fails to import
+# (TypeError: Error: Str is not a valid node type in AST), which silently
+# empties bandit's checker set — `bandit -r src/` still exits 0 with
+# "No issues identified" while skipping every file with a string literal.
+# Verified fixed on 1.9.4 against this project's runtime (python@3.14).
+bandit==1.9.4
 
 # toolchain.formatter
 black==24.10.0
