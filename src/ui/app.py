@@ -3,6 +3,7 @@
 @sdoc[REQ-FUNC-005]
 @sdoc[REQ-FUNC-006]
 @sdoc[REQ-FUNC-007]
+@sdoc[REQ-FUNC-008]
 @sdoc[REQ-ARCH-001]
 @sdoc[REQ-ARCH-013]
 """
@@ -128,6 +129,7 @@ class TaskmasterApp(App):
         yield Input(placeholder="add a task", id="task-input")
         yield Input(placeholder="space (optional)", id="space-input")
         yield DateInput(value=date.today().isoformat(), id="date-input")
+        yield Static(id="filter-status", markup=False)
         yield ListView(id="task-list")
 
     def on_mount(self) -> None:
@@ -201,7 +203,17 @@ class TaskmasterApp(App):
         self._refresh_list()
 
     def _refresh_list(self) -> None:
-        """@sdoc[REQ-FUNC-001]"""
+        """@sdoc[REQ-FUNC-001]
+        @sdoc[REQ-FUNC-008]
+        """
+        space = self.state.active_space or "all"
+        date_view = self.state.active_date_view or "all"
+        # markup=False: active_space is user-entered text, same untrusted-
+        # input posture as the task list's own text (REQ-ARCH-018).
+        self.query_one("#filter-status", Static).update(
+            f"space: {space} | view: {date_view}"
+        )
+
         task_list = self.query_one("#task-list", ListView)
         task_list.clear()
         for task in self.state.visible_tasks:
