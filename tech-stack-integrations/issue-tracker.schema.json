@@ -41,7 +41,17 @@
       "required": ["pattern", "link_url_template"],
       "properties": {
         "pattern": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "link_url_template": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "prefix": {
+          "description": "Literal head stripped from a `pattern` match to yield the bare {id} (e.g. '#' for GitHub, 'AB#' for Azure Boards, '' for Jira). Optional for backward compatibility; absent means the reference is already bare.",
+          "type": "string"
+        },
+        "link_url_template": {
+          "description": "URL template taking the bare {id}. {ref} carries the tracker prefix and would render a broken URL, so it is rejected here.",
+          "allOf": [
+            { "$ref": "#/$defs/stringOrPlaceholder" },
+            { "not": { "pattern": "\\{ref\\}" } }
+          ]
+        }
       }
     },
     "labels": {
@@ -86,9 +96,9 @@
       "additionalProperties": false,
       "required": ["create_issue", "list_issues", "close_issue"],
       "properties": {
-        "create_issue": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "list_issues": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "close_issue": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "create_issue": { "$ref": "#/$defs/shellCommandTemplate" },
+        "list_issues": { "$ref": "#/$defs/shellCommandTemplate" },
+        "close_issue": { "$ref": "#/$defs/shellCommandTemplate" }
       }
     },
     "gate": {
@@ -99,7 +109,8 @@
         "on_missing_issue_reference": { "const": "hard-gate" },
         "on_unknown_label": { "const": "hard-gate" },
         "on_missing_origin_label": { "const": "hard-gate" },
-        "on_broken_link": { "const": "hard-gate" }
+        "on_broken_link": { "const": "hard-gate" },
+        "on_unquoted_command_token": { "const": "hard-gate" }
       }
     }
   },
@@ -107,6 +118,17 @@
     "stringOrPlaceholder": {
       "type": "string",
       "minLength": 1
+    },
+    "shellCommandTemplate": {
+      "description": "A shell command invoked verbatim by skills. Every {token} must be single-quoted: '{id}'. An unquoted token whose value carries a '#' prefix truncates the command at the shell comment character, silently discarding every argument after it.",
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "anyOf": [
+          { "pattern": "(^|[^'])\\{[a-z_]+\\}" },
+          { "pattern": "\\{[a-z_]+\\}($|[^'])" }
+        ]
+      }
     }
   }
 }

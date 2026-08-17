@@ -25,12 +25,41 @@ auth:
   credential_key: "kv/taskmaster/github-token"    # path in the secrets vault (see secrets-vault.yaml)
 
 # ─── 3. Issue ID convention ───────────────────────────────────────────────────
+#
+# SUBSTITUTION TOKENS — two, deliberately distinct:
+#
+#   {ref}   the reference exactly as written in commits and PRs, prefix
+#           included:  "#42" (GitHub), "AB#42" (Azure Boards), "ORDERS-42" (Jira)
+#   {id}    the bare identifier, prefix stripped:
+#           "42"       "42"                       "ORDERS-42"
+#
+# `{ref}` is for prose only — commit messages, PR bodies. `{id}` is the ONLY
+# token permitted in `commands.*` and in `link_url_template`.
+#
+# Every token inside a command string MUST be single-quoted: '{id}'. This is
+# not style. With a prefix of `#`, an unquoted token renders a literal `#`,
+# which the shell reads as the start of a comment:
+#
+#   gh issue close {id} --comment '{c}'   →   gh issue close #42 --comment '...'
+#
+# and everything from `#42` onward is discarded — the command silently becomes
+# a bare `gh issue close`. It fails quietly, with a zero exit status. The
+# schema rejects any unquoted token; `check-integration-consistency.sh` gates
+# on it as well.
 
 id:
-  pattern: "#[0-9]+"            # regex, e.g. "#[0-9]+" (GitHub), "[A-Z]+-[0-9]+" (Jira, Linear)
-  link_url_template: "https://github.com/user/taskmaster-core/issues/{id}"  # URL template with {id}
+  pattern: "#[0-9]+"            # matches a reference AS WRITTEN, prefix included:
+                                    # e.g. "#[0-9]+" (GitHub), "AB#[0-9]+" (Azure Boards),
+                                    #      "[A-Z]+-[0-9]+" (Jira, Linear)
+  prefix: "#"             # literal head to strip from a match to get {id}:
+                                    # e.g. "#" (GitHub), "AB#" (Azure Boards), "" (Jira)
+  link_url_template: "https://github.com/user/taskmaster-core/issues/{id}"  # takes {id}, never {ref}:
+                                    # e.g. "https://github.com/acme/orders-api/issues/{id}"
 
 # ─── 4. Label taxonomy (framework-fixed) ──────────────────────────────────────
+#
+# All labels below MUST exist in the tracker before the framework is used.
+# Skills MUST reject any label not listed here. Provisioning is a human task.
 
 labels:
   types:
@@ -52,20 +81,29 @@ labels:
 # ─── 5. Linking syntax ────────────────────────────────────────────────────────
 
 linking:
-  commit_reference_syntax: "refs #{id}"   # e.g. "refs #{id}", "ORDERS-{id}"
-  pr_closes_syntax: "closes #{id}"          # e.g. "closes #{id}", "Closes: {id}"
+  commit_reference_syntax: "refs #{id}"   # prose — uses {ref}, e.g. "refs {ref}"
+  pr_closes_syntax: "closes #{id}"          # prose — uses {ref}, e.g. "closes {ref}"
 
 # ─── 6. Commands ──────────────────────────────────────────────────────────────
+#
+# Concrete invocations for programmatic issue operations. Skills invoke these
+# verbatim (e.g. production-observability creates a Phase 6.C.1 backlog item).
+#
+# Every {token} MUST be single-quoted, and only {id} may appear — see § 3.
 
 commands:
   create_issue: "gh issue create --title '{title}' --label '{labels}' --body '{body}'"              # e.g. gh issue create --title '{title}' --label '{labels}' --body '{body}'
   list_issues:  "gh issue list --label '{label}' --json number,title"              # e.g. gh issue list --label '{label}' --json number,title
-  close_issue:  "gh issue close {id} --comment '{comment}'"              # e.g. gh issue close {id} --comment '{comment}'
+  close_issue:  "gh issue close '{id}' --comment '{comment}'"              # e.g. gh issue close '{id}' --comment '{comment}'
 
 # ─── 7. Gate policy ───────────────────────────────────────────────────────────
+#
+# Every violation MUST hard-gate: the agent reports the exact violation, stops,
+# and waits for a human. No warn-and-continue.
 
 gate:
   on_missing_issue_reference: hard-gate    # commit or PR without an issue ID matching id.pattern
   on_unknown_label: hard-gate               # a label used that isn't in the taxonomy above
   on_missing_origin_label: hard-gate        # issue created by a skill without an origin:* label
   on_broken_link: hard-gate                 # link_url_template renders to a URL that doesn't resolve
+  on_unquoted_command_token: hard-gate      # a {token} in commands.* that is not single-quoted

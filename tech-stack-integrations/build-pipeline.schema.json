@@ -12,7 +12,8 @@
     "branch_protection",
     "merge_policy",
     "deployment",
-    "gate"
+    "gate",
+    "architecture_suites"
   ],
   "properties": {
     "tool": {
@@ -79,14 +80,22 @@
         "security-scan",
         "test-e2e",
         "bench",
+        "docs-build",
+        "schema-validation",
         "traceability-gate",
         "glossary-gate",
+        "docs-layout-gate",
+        "integration-consistency-gate",
+        "uid-uniqueness-gate",
+        "relations-gate",
+        "framework-feedback-gate",
+        "branch-protection-gate",
         "nfr-fields-gate",
         "design-review-gate",
         "design-review-gate-arch",
+        "traceability-gate-arch",
         "module-structure-gate",
-        "docs-build",
-        "schema-validation"
+        "docs-overview-gate"
       ],
       "properties": {
         "lint": {
@@ -138,6 +147,54 @@
             }
           }
         },
+        "docs-layout-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-docs-layout.sh"
+            }
+          }
+        },
+        "integration-consistency-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-integration-consistency.sh"
+            }
+          }
+        },
+        "uid-uniqueness-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-uid-uniqueness.sh"
+            }
+          }
+        },
+        "relations-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-relations.sh"
+            }
+          }
+        },
+        "framework-feedback-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-framework-feedback.sh"
+            }
+          }
+        },
+        "branch-protection-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-branch-protection.sh"
+            }
+          }
+        },
         "nfr-fields-gate": {
           "$ref": "#/$defs/scriptedSuite",
           "properties": {
@@ -162,6 +219,14 @@
             }
           }
         },
+        "traceability-gate-arch": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-traceability.sh --phase verify --architecture-only"
+            }
+          }
+        },
         "module-structure-gate": {
           "$ref": "#/$defs/scriptedSuite",
           "properties": {
@@ -169,7 +234,58 @@
               "const": ".framework/scripts/check-module-structure.sh"
             }
           }
+        },
+        "docs-overview-gate": {
+          "$ref": "#/$defs/scriptedSuite",
+          "properties": {
+            "command": {
+              "const": ".framework/scripts/check-traceability.sh --report --overview --check"
+            }
+          }
         }
+      },
+      "description": "Framework-fixed suites are declared in `properties`, their commands are locked so a product cannot repoint a gate at something weaker, and as of 3.0.0 every one of them is `required` — a pipeline that does not declare a framework gate no longer validates. Between 1.6.0 and 3.0.0 newly added suites were listed but not required, so a product could upgrade before rewiring its pipeline; that staging period is over and the batch landed together, which is the point of putting it on a major. A product MAY declare its own gates under a `product-` prefix — the namespace exists so a product-specific check is never smuggled in under a framework name like `lint`, which would make the pipeline describe something it is not running.",
+      "patternProperties": {
+        "^product-[a-z0-9]+(-[a-z0-9]+)*$": {
+          "description": "A product-defined gate. Free-form command; the framework does not constrain it.",
+          "$ref": "#/$defs/placeholderSuite"
+        }
+      }
+    },
+    "architecture_suites": {
+      "type": "array",
+      "description": "The subset of `suites` that runs on an `arch/<slug>` branch. The architecture track authors requirements and carries no implementation by design, so the code-shaped suites cannot pass there and holding an architecture PR to them makes a correct architecture PR unmergeable. Entries SELECT existing suites by name — they never define a suite or a command, so this list cannot weaken a gate, only choose which gates apply. Every entry MUST also be a key under `suites`; that cross-reference is not expressible in JSON Schema and is enforced by check-integration-consistency.sh. Optional: a product that never uses the architecture track may omit it, in which case an arch branch runs the full suite set.",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "enum": [
+              "lint",
+              "format-check",
+              "type-check",
+              "security-scan",
+              "traceability-gate-arch",
+              "docs-overview-gate",
+              "glossary-gate",
+              "docs-layout-gate",
+              "integration-consistency-gate",
+              "uid-uniqueness-gate",
+              "relations-gate",
+              "framework-feedback-gate",
+              "branch-protection-gate",
+              "nfr-fields-gate",
+              "design-review-gate-arch",
+              "module-structure-gate",
+              "docs-build",
+              "schema-validation"
+            ]
+          },
+          {
+            "pattern": "^product-[a-z0-9]+(-[a-z0-9]+)*$",
+            "type": "string"
+          }
+        ]
       }
     },
     "artifacts": {
@@ -234,6 +350,77 @@
         },
         "allow_deletion": {
           "const": false
+        },
+        "enforcement": {
+          "description": "Where the policy above is actually enforced. The policy fields state what the project REQUIRES; this states what stops a bad merge. Optional for backward compatibility — absent means unknown, and check-branch-protection.sh warns. It becomes required in a later minor.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mechanism"
+          ],
+          "properties": {
+            "mechanism": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "host-native",
+                    "manual-process",
+                    "none"
+                  ]
+                },
+                {
+                  "const": "<PLACEHOLDER>"
+                }
+              ]
+            },
+            "verified_by": {
+              "$ref": "#/$defs/stringOrPlaceholder"
+            },
+            "unenforceable_reason": {
+              "$ref": "#/$defs/stringOrPlaceholder"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mechanism": {
+                    "const": "host-native"
+                  }
+                },
+                "required": [
+                  "mechanism"
+                ]
+              },
+              "then": {
+                "required": [
+                  "verified_by"
+                ],
+                "description": "A host-native claim must be checkable, or it is just an assertion."
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mechanism": {
+                    "enum": [
+                      "manual-process",
+                      "none"
+                    ]
+                  }
+                },
+                "required": [
+                  "mechanism"
+                ]
+              },
+              "then": {
+                "required": [
+                  "unenforceable_reason"
+                ],
+                "description": "Declaring the policy unenforced requires saying why, so the gap is a recorded decision rather than a silent one."
+              }
+            }
+          ]
         }
       }
     },
@@ -327,13 +514,7 @@
         "on_branch_protection_bypass",
         "on_missing_review",
         "on_nfr_regression",
-        "on_missing_po_approval",
-        "on_review_failure",
-        "on_artifact_publish_failure",
-        "on_coverage_regression",
-        "on_acceptance_failure",
-        "on_rollback_unavailable",
-        "min_coverage_percent"
+        "on_missing_po_approval"
       ],
       "properties": {
         "on_suite_failure": {
@@ -353,26 +534,6 @@
         },
         "on_missing_po_approval": {
           "const": "hard-gate"
-        },
-        "on_review_failure": {
-          "const": "hard-gate"
-        },
-        "on_artifact_publish_failure": {
-          "const": "hard-gate"
-        },
-        "on_coverage_regression": {
-          "const": "hard-gate"
-        },
-        "on_acceptance_failure": {
-          "const": "hard-gate"
-        },
-        "on_rollback_unavailable": {
-          "const": "hard-gate"
-        },
-        "min_coverage_percent": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100
         }
       }
     }

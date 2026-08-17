@@ -48,33 +48,29 @@ Rules the parser enforces:
   Phase 1 (`sdd-spec`). This section is empty in the framework template.
 -->
 
-## Task
+## task
 
-**Definition:** A unit of work tracked by TaskMaster Core, optionally carrying a Due Date and optionally assigned to a Space.
-**Examples:** "Write the architecture doc", "Renew the domain"
+**Definition:** A single unit of work the user tracks, carrying a text description, a completion state, a space, and an optional due date.
+**Examples:** "buy bread"; "send the invoice", due 2026-08-20, space "work".
 
-## Space
+## space
 
-**Definition:** A named container that groups related Tasks so they can be organized and retrieved together.
-**Examples:** "Work", "Home", "Q3 launch"
+**Definition:** A free-text label on a task that groups it by context, and which exists only while at least one task names it.
+**Examples:** work; school; personal.
 
-## Due Date
+## overdue
 
-**Definition:** The instant at which a Task becomes due, used by `tasks` to decide whether the Task is an Overdue Task.
+**Definition:** The state of a task that is not complete and whose due date is earlier than the current date.
 
-## Overdue Task
+## filter
 
-**Definition:** A Task whose Due Date lies in the past at the moment a due-date check runs.
+**Definition:** The combination of space and date view currently selected by the user, determining which tasks are presented.
+**Examples:** space "work" with the today view; no space with the overdue view.
 
-## Reminder
+## store
 
-**Definition:** A single message delivered to the User announcing one Overdue Task.
+**Definition:** The single local file in which task records are persisted between runs of the application.
 
-## Command
+## file fingerprint
 
-**Definition:** A single instruction issued by the User through `cli`, such as creating a Task, listing Tasks, or assigning a Task to a Space.
-**Examples:** create task, list tasks, assign task to space
-
-## Task List
-
-**Definition:** The ordered collection of Tasks returned by a task-listing Command, possibly empty.
+**Definition:** A value derived from the store at read time, compared before a later write to detect whether the store changed outside the application.

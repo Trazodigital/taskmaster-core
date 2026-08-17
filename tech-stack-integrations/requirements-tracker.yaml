@@ -1,9 +1,15 @@
 # requirements-tracker.yaml — Interaction contract for the requirements tracker
 #
 # Describes HOW the framework interacts with whatever tool stores requirements
-# (StrictDoc, DOORS Next, Jira with a REQ plugin, plain markdown files, etc.).
-# Skills read this file to resolve tool-specific commands, marker placement,
-# and gate behavior.
+# (plain markdown files, DOORS Next, Jira with a REQ plugin, etc.). Skills read
+# this file to resolve tool-specific commands, marker placement, and gate
+# behavior.
+#
+# The gate scripts parse `markdown` only — see `storage.format`. That is a
+# deliberate choice, not an oversight: a heavier tracker would impose its own
+# runtime on every product regardless of the product's language (CHANGELOG,
+# "Requirements storage stays markdown — StrictDoc rejected"). Declaring a
+# format the scripts cannot parse is an error, never a silent pass.
 #
 # TEMPLATE FILE. Every <PLACEHOLDER> value MUST be replaced with a concrete
 # choice before any framework skill is invoked. Skills MUST hard-gate on any
@@ -15,7 +21,7 @@
 # ─── 1. Tool identity ─────────────────────────────────────────────────────────
 
 tool:
-  name: "strictdoc"              # e.g. strictdoc, doors-next, jira-req
+  name: markdown-files             # markdown-files (supported today) | doors-next | jira-req
   interaction_mode: "local-files"  # local-files | cli | rest-api | webhook
 
 # ─── 2. Authentication ────────────────────────────────────────────────────────
@@ -32,26 +38,39 @@ auth:
 
 storage:
   requirements_dir: docs/requirements     # framework-fixed
-  file_extension: "md"           # e.g. sdoc, md, yaml
-  one_file_per: "requirement"             # feature | requirement | project
+  format: markdown                        # the only format the gate scripts parse
+  file_extension: md                      # corpus glob; must match `format`
+  one_file_per: feature                   # feature | requirement | project
   glossary_file: docs/glossary.md         # framework-fixed
+
+# `one_file_per: feature` groups related requirements into one file and is the
+# recommended default — the framework generates one requirement per diagram
+# node/edge/subgraph (see `mermaid-intake`), so `requirement` turns a single
+# architecture diagram into dozens of flat files. All three values are checked
+# per requirement, not per file.
 
 # ─── 4. UID convention ────────────────────────────────────────────────────────
 
 uid:
-  pattern: "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"  # framework-fixed; inherited from tech-stack.yaml
-  types:                                  # extendable per project
+  # Framework-fixed; inherited from tech-stack.yaml. The `(-[A-Z]+)*` group
+  # exists because the shipped types below include hyphenated names: without it
+  # `REQ-NFR-PERF-001` matches nothing, and every gate that resolves UIDs from
+  # this pattern goes blind to the entire NFR corpus.
+  pattern: "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"
+  types:                                  # extendable per project; written WITHOUT the `REQ-` prefix
     - ARCH
     - FUNC
     - NFR-PERF
     - NFR-SEC
     - NFR-USE
-  uniqueness_check: "scripts/check-traceability.sh"         # command that exits 0 if all UIDs are unique
+  uniqueness_check: scripts/check-uid-uniqueness.sh   # framework-fixed
 
 # ─── 5. Traceability markers ──────────────────────────────────────────────────
 
 markers:
-  syntax: "@sdoc[<UID>]"                  # framework-fixed
+  # Framework-fixed and tool-neutral. `@sdoc` is this framework's marker string,
+  # not a dependency on any requirements tool; it works unchanged over markdown.
+  syntax: "@sdoc[<UID>]"
   comment_style: "python-docstring"            # jsdoc | python-docstring | godoc | rustdoc
   scan_paths:                             # framework-fixed
     - src
@@ -63,21 +82,44 @@ markers:
     - .venv
     - target
 
+# ─── 5b. Requirement relations ────────────────────────────────────────────────
+#
+# `refines` is the only relation type: a child requirement is a more specific
+# statement of its parent. It mirrors decomposition (architecture → functional →
+# NFR) and answers the two questions a flat corpus cannot — "why does this
+# requirement exist?" (walk up) and "what breaks if I change it?" (walk down).
+# `depends_on` and `conflicts_with` were deliberately left out: they describe
+# ordering and review concerns, form no tree, and answer neither question.
+#
+# Authoring: one column-0 field per requirement, comma-separated for several
+# parents.
+#
+#     UID: REQ-FUNC-012
+#
+#     REFINES: REQ-ARCH-005, REQ-ARCH-009
+#
+# `check-relations.sh` validates that every named parent exists, that nothing
+# refines itself, and that the graph is acyclic — always. Those three run
+# against whatever is written.
+
+relations:
+  refines:
+    roots: [ARCH]              # types that legitimately have no parent
+    # Types that MUST declare a parent. Ships empty on purpose: turning this on
+    # before the corpus is annotated hard-gates a team on every requirement at
+    # once, which is how a good gate gets switched off. Populate the graph
+    # first, then enable.
+    required_for_types: []
+
 # ─── 6. Commands ──────────────────────────────────────────────────────────────
 #
 # Concrete invocations per capability. Skills invoke these verbatim.
 # Values under scripts/ are framework-fixed and MUST NOT be changed.
 
 commands:
-  # Both commands below need an explicit mode: check-traceability.sh exits 2
-  # with usage unless given --phase or --report. requirements-authoring invokes
-  # them verbatim (SKILL.md steps 4-5), so without a mode every REQ authored
-  # hard-gates. --phase spec is the authoring-time mode: it validates UID
-  # uniqueness and orphan markers without demanding the src/tests markers that
-  # only exist after Phase 3.
-  validate_corpus: "scripts/check-traceability.sh --phase spec"          # e.g. "strictdoc passthrough docs/requirements/"
-  export_matrix: "scripts/check-traceability.sh --report"            # e.g. "strictdoc export --format=html docs/requirements/"
-  check_uniqueness: "scripts/check-traceability.sh --phase spec"         # e.g. "strictdoc passthrough --check-uid docs/requirements/"
+  validate_corpus: "scripts/check-traceability.sh --phase spec"          # corpus well-formedness; exits 0 when valid
+  export_matrix: scripts/check-traceability.sh --report
+  check_uniqueness: scripts/check-uid-uniqueness.sh
   check_glossary: scripts/check-glossary.sh
   check_nfr_fields: scripts/check-nfr-fields.sh
   check_traceability: scripts/check-traceability.sh
@@ -86,9 +128,9 @@ commands:
 
 nfr_fields:
   required_for_types:
-    - REQ-NFR-PERF
-    - REQ-NFR-SEC
-    - REQ-NFR-USE
+    - NFR-PERF
+    - NFR-SEC
+    - NFR-USE
   fields:
     - METRIC
     - THRESHOLD

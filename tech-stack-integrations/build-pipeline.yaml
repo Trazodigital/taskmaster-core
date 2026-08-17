@@ -34,11 +34,27 @@ auth:
 # .framework/scripts/*.sh are framework-fixed (run with QF_ROOT set to the repo
 # root — the gate scripts live inside the submodule). Valid triggers:
 # push | pr | tag | release-branch | schedule | manual
+#
+# PRODUCT-DEFINED SUITES. A product may add its own gates under a `product-`
+# prefix, with any command it likes:
+#
+#   product-openapi-coverage:
+#     command: <your own command>      # any script or tool YOUR product ships
+#     triggers: [push, pr]
+#     blocking: true
+#     artifacts: []
+#
+# The prefix is required. Without a namespace, a product gate could take a bare
+# name that a later framework release also uses, silently changing what that
+# name means — and the only alternative was smuggling the check in under an
+# existing name like `lint`, which makes this file describe something it is not
+# running. Framework-fixed suites stay locked: their commands cannot be
+# repointed, so a gate can never be quietly weakened.
 
 suites:
 
   lint:
-    command: "flake8 src/"                       # resolves toolchain.linter from tech-stack.yaml
+    command: "mkdir -p reports/lint && flake8 src/ --tee --output-file=reports/lint/flake8.txt"                       # resolves toolchain.linter from tech-stack.yaml
     triggers: [push, pr]
     blocking: true
     artifacts: [lint-report]
@@ -50,34 +66,31 @@ suites:
     artifacts: []
 
   type-check:
-    # `py_compile src/**/*.py` needs globstar, which is off by default in bash
-    # and absent in sh, so it silently checked only the first directory level.
-    # compileall is the same check with a working recursive walk.
     command: "python3 -m compileall -q src/"                       # e.g. tsc --noEmit, mypy, go vet
     triggers: [push, pr]
     blocking: true
     artifacts: []
 
   test-unit:
-    command: "pytest tests/"                       # resolves toolchain.test_runner unit subset
+    command: "mkdir -p reports/junit reports/coverage && pytest tests/ src/ --junitxml=reports/junit/junit.xml --cov=src --cov-report=xml:reports/coverage/coverage.xml --cov-report=term"                       # resolves toolchain.test_runner unit subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml, coverage]
 
   test-integration:
-    command: "pytest tests/"                       # resolves toolchain.test_runner integration subset
+    command: "mkdir -p reports/junit && pytest tests/ src/ --junitxml=reports/junit/integration.xml"                       # resolves toolchain.test_runner integration subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   test-security:
-    command: "bandit -r src/"                       # resolves toolchain.test_runner security subset
+    command: "mkdir -p reports/security && bandit -r src/ -f sarif -o reports/security/bandit.sarif"                       # resolves toolchain.test_runner security subset
     triggers: [push, pr]
     blocking: true
     artifacts: [junit-xml]
 
   security-scan:
-    command: "bandit -r src/"                       # resolves toolchain.security_scanner
+    command: "mkdir -p reports/security && bandit -r src/ -f sarif -o reports/security/bandit.sarif"                       # resolves toolchain.security_scanner
     triggers: [push, pr]
     blocking: true
     artifacts: [sarif]
@@ -89,7 +102,7 @@ suites:
     artifacts: [junit-xml, e2e-video]
 
   bench:
-    command: "pytest --benchmark-only"                       # resolves toolchain.benchmark_tool
+    command: "mkdir -p reports/bench && pytest --benchmark-only --benchmark-json=reports/bench/benchmark.json"                       # resolves toolchain.benchmark_tool
     triggers: [tag, release-branch]
     blocking: true
     artifacts: [benchmark-report, heap-snapshot]
@@ -100,8 +113,56 @@ suites:
     blocking: true
     artifacts: [traceability-matrix]
 
+  traceability-gate-arch:
+    command: .framework/scripts/check-traceability.sh --phase verify --architecture-only   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: [traceability-matrix]
+
+  docs-overview-gate:
+    command: .framework/scripts/check-traceability.sh --report --overview --check   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
   glossary-gate:
     command: .framework/scripts/check-glossary.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  docs-layout-gate:
+    command: .framework/scripts/check-docs-layout.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  integration-consistency-gate:
+    command: .framework/scripts/check-integration-consistency.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  uid-uniqueness-gate:
+    command: .framework/scripts/check-uid-uniqueness.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  relations-gate:
+    command: .framework/scripts/check-relations.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  framework-feedback-gate:
+    command: .framework/scripts/check-framework-feedback.sh   # QF_ROOT env var must be set to the repo root
+    triggers: [push, pr]
+    blocking: true
+    artifacts: []
+
+  branch-protection-gate:
+    command: .framework/scripts/check-branch-protection.sh   # QF_ROOT env var must be set to the repo root
     triggers: [push, pr]
     blocking: true
     artifacts: []
@@ -131,16 +192,49 @@ suites:
     artifacts: []
 
   docs-build:
-    command: "python3 -m unittest"                       # e.g. mkdocs build --strict, strictdoc export
+    command: "mkdir -p reports/docs && cp -R docs/. reports/docs/"                       # e.g. mkdocs build --strict, strictdoc export
     triggers: [push, pr]
     blocking: true
     artifacts: [docs-site]
 
   schema-validation:
-    command: "python3 -c 'print(\"Validating schema\")'"                       # validates tech-stack.yaml + tech-stack-integrations/*.yaml
+    command: "python3 -c 'print(\"Validating schema\")'"   # validates tech-stack.yaml + tech-stack-integrations/*.yaml
     triggers: [push, pr]
     blocking: true
     artifacts: []
+
+# ─── 3b. Architecture-track suites ────────────────────────────────────────────
+#
+# The framework runs two tracks. A feature/bugfix branch carries implementation
+# and is held to every suite above. An `arch/<slug>` branch authors the
+# requirements corpus and carries NO implementation — that is not an omission,
+# it is what workflows/sdd-architecture.md prescribes ("architecture-only — no
+# feature code, no feature tests").
+#
+# So the code-shaped suites cannot pass there, and holding an architecture PR to
+# them would make a CORRECT architecture PR structurally unmergeable. This list
+# names the subset that runs on an architecture branch. Every entry MUST also be
+# a key under `suites` above — the list selects existing suites, it never
+# defines new ones or new commands.
+#
+# This is a NARROWING, not a bypass. Each suite named here runs in full and
+# hard-gates exactly as it does on a feature branch; `traceability-gate-arch`
+# still fails on orphan markers, and still reports the true uncovered counts
+# alongside `"architecture_only": true`. What changes is which suites apply,
+# and that is decided by the branch — not by the person running the command.
+
+architecture_suites:
+  - traceability-gate-arch
+  - docs-overview-gate
+  - glossary-gate
+  - nfr-fields-gate
+  - design-review-gate-arch
+  - uid-uniqueness-gate
+  - relations-gate
+  - docs-layout-gate
+  - integration-consistency-gate
+  - framework-feedback-gate
+  - schema-validation
 
 # ─── 4. Artifacts ─────────────────────────────────────────────────────────────
 #
@@ -160,6 +254,23 @@ artifacts:
   docs-site:           { path: reports/docs/,          retention: per-release }
 
 # ─── 5. Branch protection ─────────────────────────────────────────────────────
+#
+# Two different things live here, and conflating them produces a config file
+# that states a falsehood:
+#
+#   POLICY      — what this project requires. The fields below. Framework-fixed.
+#   ENFORCEMENT — what actually stops a bad merge. The `enforcement` block.
+#
+# The policy fields are locked to their strict values on purpose: the framework
+# requires reviewed, linear, non-force-pushed history, and there is no
+# supported way to declare otherwise. But requiring something is not the same
+# as being able to enforce it. A private repository on a GitHub plan without
+# branch protection returns 403 from the protection API, and a CODEOWNERS file
+# on its own only auto-requests a reviewer — it blocks nothing.
+#
+# Declare the truth in `enforcement`. A project that cannot enforce the policy
+# server-side is a supported state; a config that silently claims an enforced
+# gate that does not exist is not.
 
 branch_protection:
   protected_branches: [main]
@@ -172,7 +283,15 @@ branch_protection:
     - test-security
     - security-scan
     - traceability-gate
+    - traceability-gate-arch
+    - docs-overview-gate
     - glossary-gate
+    - docs-layout-gate
+    - integration-consistency-gate
+    - uid-uniqueness-gate
+    - relations-gate
+    - framework-feedback-gate
+    - branch-protection-gate
     - nfr-fields-gate
     - design-review-gate
     - design-review-gate-arch
@@ -184,6 +303,24 @@ branch_protection:
   require_linear_history: true
   allow_force_push: false
   allow_deletion: false
+
+  # Where the policy above is actually enforced.
+  #
+  #   host-native     the hosting platform enforces it server-side. `verified_by`
+  #                   MUST be set; check-branch-protection.sh runs it and
+  #                   hard-gates when live protection does not match the policy.
+  #   manual-process  humans enforce it by agreement. The gate reports a
+  #                   DEGRADED state and passes — honest, not silent.
+  #   none            nothing enforces it. Same reporting, no pretence.
+  #
+  # `unenforceable_reason` is REQUIRED unless mechanism is host-native. Write
+  # the real reason ("private repo on GitHub Free — protection API returns
+  # 403"), not a placeholder sentence.
+  enforcement:
+    mechanism: "manual-process"             # host-native | manual-process | none
+    verified_by: ""           # required for host-native; exits 0 when live protection matches
+                                         # e.g. gh api "repos/{owner}/{repo}/branches/main/protection" >/dev/null
+    unenforceable_reason: "GitHub enforces the CODEOWNERS review on main (require_code_owner_reviews=true, 1 approval) but no required status checks are configured. The quality-gates workflow publishes ONE check, so the suite names in required_checks cannot map to GitHub status checks as declared; they are enforced inside that job by scripts/local_dry_CI_run_before_commit.sh, not by the host."  # required unless host-native
 
 # ─── 6. Merge policy ──────────────────────────────────────────────────────────
 
@@ -218,22 +355,3 @@ gate:
   on_missing_review: hard-gate
   on_nfr_regression: hard-gate
   on_missing_po_approval: hard-gate
-
-  # The six keys above ship with the framework template. The keys below are read
-  # by skills that had no value to resolve, which would have surfaced as a
-  # Phase 4 hard-gate with nothing to compare against:
-  #   verification-suite-execution -> min_coverage_percent, on_suite_failure,
-  #                                   on_artifact_publish_failure,
-  #                                   on_coverage_regression
-  #   code-review-gate             -> on_review_failure
-  #   system-acceptance-gate       -> on_acceptance_failure,
-  #                                   on_rollback_unavailable
-  # Those skills spell the section `gates.` while the schema requires `gate`;
-  # the section name stays singular here because build-pipeline.schema.json
-  # declares it required and rejects unknown top-level keys.
-  min_coverage_percent: 80
-  on_review_failure: hard-gate
-  on_artifact_publish_failure: hard-gate
-  on_coverage_regression: hard-gate
-  on_acceptance_failure: hard-gate
-  on_rollback_unavailable: hard-gate

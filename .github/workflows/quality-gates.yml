@@ -17,45 +17,86 @@ jobs:
           submodules: recursive
           # full history so PR base..head is resolvable for the commit-range gate
           fetch-depth: 0
-          # .framework is a submodule living in a SEPARATE private org repo
-          # (Trazodigital/Team_Repo_Quality_Framework_Gentle.ai). The default
-          # GITHUB_TOKEN is scoped to this repository alone, so cloning it fails
-          # with "remote: Repository not found" and every gate step then dies on
-          # a missing .framework/scripts/. FRAMEWORK_PAT must carry read access
-          # to BOTH repositories. The fallback keeps the default token when the
-          # secret is absent (fork PRs cannot read secrets), which fails at the
-          # submodule clone exactly as it does today rather than on an empty
-          # credential.
+          # PRODUCT-OWNED EDIT. .framework is a submodule living in a SEPARATE
+          # private org repo (Trazodigital/Team_Repo_Quality_Framework_Gentle.ai)
+          # and .gitmodules addresses it over SSH. The default GITHUB_TOKEN is
+          # scoped to this repository alone, so the submodule clone fails and
+          # every gate step then dies on a missing .framework/scripts/.
+          # FRAMEWORK_PAT must carry read access to BOTH repositories. The
+          # fallback keeps the default token when the secret is absent (fork PRs
+          # cannot read secrets), which fails at the submodule clone exactly as
+          # it would anyway rather than on an empty credential.
           token: ${{ secrets.FRAMEWORK_PAT || github.token }}
 
-      # Pin the interpreter to the one tech-stack.yaml § project.runtime
-      # declares. Without this the job takes whatever python3 the runner image
-      # happens to ship, so the declared runtime is decorative and a GitHub
-      # image bump can change behaviour with no commit of ours.
-      - name: Use the declared Python runtime
+      # The verifiers accept `yq` OR `python3` + PyYAML. `yq` is chosen here on
+      # purpose: it is a single static binary that installs next to the product
+      # and joins nothing. PyYAML is an interpreted package that enters the
+      # product's own dependency graph and has to be reconciled with it — a real
+      # cost when the product is itself Python with pinned versions. The
+      # framework should add no overhead to a product it knows nothing about.
+      # GitHub's ubuntu images normally ship `yq`, so the download is a fallback
+      # that usually does not run. Version is pinned; bump it deliberately.
+      - name: Ensure a YAML parser is available
+        run: |
+          if command -v yq >/dev/null 2>&1; then
+            echo "yq already present: $(yq --version)"
+            exit 0
+          fi
+          YQ_VERSION=v4.44.3
+          sudo curl -fsSL -o /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      # PRODUCT-OWNED EDIT. Pin the interpreter to the one tech-stack.yaml
+      # § project.runtime declares. Without this the job takes whatever python3
+      # the runner image happens to ship, so the declared runtime is decorative
+      # and a GitHub image bump can change behaviour with no commit of ours.
+      - name: Use the declared Python runtime (tech-stack.yaml § project.runtime)
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
-      - name: Install the YAML parser the verifiers use
-        run: python3 -m pip install --quiet pyyaml
-
-      # USER_MANUAL.md § 5.3: the toolchain declared in tech-stack.yaml must be
-      # installed before any build-pipeline suite can resolve. Without this step
-      # every suites.* command below is a "command not found", which Phase 4
-      # (verification-suite-execution) would surface as a false failure.
+      # PRODUCT-OWNED EDIT. USER_MANUAL.md § 5.3: the toolchain declared in
+      # tech-stack.yaml must be installed before any build-pipeline suite can
+      # resolve. Without this every suites.* command below is a
+      # "command not found", which Phase 4 would surface as a false failure.
       - name: Install the project toolchain (tech-stack.yaml § toolchain)
         run: python3 -m pip install --quiet -r requirements-dev.txt
 
+      # QF_BRANCH is passed because a CI checkout is a detached merge commit:
+      # `git rev-parse --abbrev-ref HEAD` reports `HEAD`, not the branch being
+      # merged. The wrapper needs the real name to tell the two tracks apart —
+      # an `arch/<slug>` head runs the architecture suite set, everything else
+      # runs the full set.
+      #
+      # The branch name is chosen by whoever opened the PR, and on a fork that
+      # is fully attacker-controlled. It is therefore NOT a trust signal, and
+      # `arch/*` alone does not buy a reduced gate set: QF_BASE_SHA lets the
+      # wrapper hard-gate an architecture branch that touches `src/` or
+      # `tests/`, which is the property that makes the reduced set sound. A PR
+      # author can pick the track; they cannot pick it AND ship code under it.
+      #
+      # Both values go through `env:`, never interpolated into the `run:` script
+      # — `github.head_ref` in a shell line is a command-injection vector.
       - name: Run Quality Framework gates
+        env:
+          QF_BRANCH: ${{ github.head_ref || github.ref_name }}
+          QF_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: bash scripts/local_dry_CI_run_before_commit.sh
 
-      # build-pipeline.yaml § suites declares lint / type-check / test-unit /
-      # test-integration / test-security as blocking on push and pull_request.
+      # PRODUCT-OWNED EDIT. build-pipeline.yaml § suites declares lint /
+      # format-check / type-check / test-unit / test-integration /
+      # test-security / security-scan as blocking on push and pull_request, and
+      # lists them in required_checks. Nothing in the framework's own workflow
+      # invokes any of them, so without this step those seven gates are declared
+      # and never run — the framework's own C3 class, "a declared gate with
+      # nothing behind it".
+      #
       # The guard exists because the architecture track lands no source: with an
-      # empty src/, `pytest tests/` exits 5 (no tests collected) and would fail
-      # CI for the wrong reason. It disappears on its own the moment Phase 3
-      # commits the first module.
+      # empty src/, `pytest tests/ src/` exits 5 (no tests collected) and would
+      # fail CI for the wrong reason. It disappears on its own the moment
+      # Phase 3 commits the first module.
       - name: Project suites (build-pipeline.yaml § suites)
         run: |
           if ! find src -type f -name '*.py' | grep -q .; then
@@ -63,9 +104,10 @@ jobs:
             exit 0
           fi
           flake8 src/
-          # build-pipeline declares `python3 -m py_compile src/**/*.py`, which
-          # needs globstar (off by default in bash, absent in sh). compileall is
-          # the same check with a working recursive walk.
+          black --check src/
+          # build-pipeline declares `python3 -m compileall -q src/`; compileall
+          # is used rather than py_compile with a glob because globstar is off
+          # by default in bash and absent in sh.
           python3 -m compileall -q src/
           pytest tests/ src/
           bandit -r src/
@@ -80,22 +122,20 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # check-branch-name.sh enforces (feature|bugfix)/<REQ-UID>-<slug> and
-          # exempts only main/master/develop/HEAD/release/*. sdd-architecture.md
-          # Preconditions #3 mandates arch/<slug>, which that gate would reject,
-          # so architecture branches are validated against their own convention
-          # here rather than skipped.
-          case "$HEAD_REF" in
-            arch/*)
-              printf '%s' "$HEAD_REF" | grep -qE '^arch/[a-z][a-z0-9-]*$' \
-                || { echo "hard-gate: architecture branch '$HEAD_REF' is not 'arch/<slug>'" >&2; exit 1; }
-              echo "branch '$HEAD_REF' matches the architecture convention arch/<slug>."
-              ;;
-            *)
-              QF_ROOT="$PWD" .framework/scripts/check-branch-name.sh --branch "$HEAD_REF"
-              ;;
-          esac
+          QF_ROOT="$PWD" .framework/scripts/check-branch-name.sh --branch "$HEAD_REF"
           QF_ROOT="$PWD" .framework/scripts/check-commit-range.sh --range "$BASE_SHA..$HEAD_SHA"
+          # A .framework bump inside this PR must be accounted for in
+          # FRAMEWORK_FEEDBACK.md — findings, or an explicit "No findings".
+          QF_ROOT="$PWD" .framework/scripts/check-framework-feedback.sh --range "$BASE_SHA..$HEAD_SHA"
+
+      # Does branch_protection describe reality? Runs here rather than in the
+      # local dry run: it calls the host's API, and CI is where the credential
+      # lives. A product declaring `enforcement.mechanism: manual-process`
+      # passes as DEGRADED without any network call.
+      - name: Branch-protection enforcement gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: QF_ROOT="$PWD" .framework/scripts/check-branch-protection.sh
 
       # Architecture-first backstop: a feature/bugfix PR must not exist before
       # the architecture layer does. Agent-time this is a workflows/sdd-new.md
@@ -108,6 +148,26 @@ jobs:
 
       # Non-blocking: publish the requirement traceability matrix
       # (Implemented / Verified / Accepted / Released) to the run summary.
-      - name: Traceability report
+      # The summary answers "is this covered?" and stays readable inline.
+      - name: Traceability report (summary)
         if: always()
         run: QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --report >> "$GITHUB_STEP_SUMMARY"
+
+      # The detail answers "covered by what?" — every source and test marker
+      # with its file:line. Too wide for the run summary, so it ships as an
+      # artifact in both renderings: Markdown to read, JSON for tooling.
+      - name: Traceability report (detail)
+        if: always()
+        run: |
+          QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --report --detail \
+            --report-out reports/traceability/traceability-detail.md
+          QF_ROOT="$PWD" .framework/scripts/check-traceability.sh --report --detail \
+            --format json --report-out reports/traceability/traceability-detail.json
+
+      - name: Upload the traceability detail report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traceability-detail
+          path: reports/traceability/
+          if-no-files-found: warn

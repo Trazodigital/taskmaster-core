@@ -5,18 +5,40 @@
   "description": "Validates tech-stack-integrations/requirements-tracker.yaml. Template values matching '<PLACEHOLDER>' are accepted so an unfilled template still validates structurally; skills MUST hard-gate on placeholders at runtime.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tool", "storage", "uid", "markers", "commands", "nfr_fields", "gate"],
+  "required": [
+    "tool",
+    "storage",
+    "uid",
+    "markers",
+    "commands",
+    "nfr_fields",
+    "gate"
+  ],
   "properties": {
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "interaction_mode"],
+      "required": [
+        "name",
+        "interaction_mode"
+      ],
       "properties": {
-        "name": { "$ref": "#/$defs/stringOrPlaceholder" },
+        "name": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
         "interaction_mode": {
           "oneOf": [
-            { "enum": ["local-files", "cli", "rest-api", "webhook"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "local-files",
+                "cli",
+                "rest-api",
+                "webhook"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         }
       }
@@ -27,93 +49,236 @@
       "properties": {
         "mode": {
           "oneOf": [
-            { "enum": ["none", "token", "oauth", "basic"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "none",
+                "token",
+                "oauth",
+                "basic"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
-        "credential_key": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "credential_key": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "storage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requirements_dir", "file_extension", "one_file_per", "glossary_file"],
+      "required": [
+        "requirements_dir",
+        "file_extension",
+        "one_file_per",
+        "glossary_file"
+      ],
       "properties": {
-        "requirements_dir": { "const": "docs/requirements" },
-        "file_extension": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "one_file_per": {
+        "requirements_dir": {
+          "const": "docs/requirements"
+        },
+        "format": {
+          "description": "Corpus format the gate scripts parse. Only 'markdown' is implemented; the scripts hard-stop on anything else rather than scan nothing and report success. Optional for backward compatibility \u2014 absent means 'markdown'.",
           "oneOf": [
-            { "enum": ["feature", "requirement", "project"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "markdown"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
-        "glossary_file": { "const": "docs/glossary.md" }
+        "file_extension": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "one_file_per": {
+          "oneOf": [
+            {
+              "enum": [
+                "feature",
+                "requirement",
+                "project"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
+          ]
+        },
+        "glossary_file": {
+          "const": "docs/glossary.md"
+        }
       }
     },
     "uid": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pattern", "types", "uniqueness_check"],
+      "required": [
+        "pattern",
+        "types",
+        "uniqueness_check"
+      ],
       "properties": {
-        "pattern": { "const": "REQ-[A-Z]+-[0-9]+" },
+        "pattern": {
+          "description": "Framework-fixed UID regex. The optional (-[A-Z]+)* segment is required for the hyphenated type names the framework ships (NFR-PERF, NFR-SEC, NFR-USE); without it a UID like REQ-NFR-PERF-001 matches nothing and every gate resolving UIDs from this pattern silently ignores the NFR corpus.",
+          "const": "REQ-[A-Z]+(-[A-Z]+)*-[0-9]+"
+        },
         "types": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "pattern": "^[A-Z][A-Z-]*$" }
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z-]*$"
+          }
         },
-        "uniqueness_check": { "$ref": "#/$defs/stringOrPlaceholder" }
+        "uniqueness_check": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        }
       }
     },
     "markers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["syntax", "comment_style", "scan_paths", "ignore_paths"],
+      "required": [
+        "syntax",
+        "comment_style",
+        "scan_paths",
+        "ignore_paths"
+      ],
       "properties": {
-        "syntax": { "const": "@sdoc[<UID>]" },
+        "syntax": {
+          "const": "@sdoc[<UID>]"
+        },
         "comment_style": {
           "oneOf": [
-            { "enum": ["jsdoc", "python-docstring", "godoc", "rustdoc"] },
-            { "const": "<PLACEHOLDER>" }
+            {
+              "enum": [
+                "jsdoc",
+                "python-docstring",
+                "godoc",
+                "rustdoc"
+              ]
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
           ]
         },
         "scan_paths": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         },
         "ignore_paths": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "relations": {
+      "description": "Requirement-to-requirement relations. Only 'refines' is supported: it mirrors decomposition and is the one relation forming a tree. Optional for backward compatibility \u2014 absent means no relations are declared, and the graph checks pass trivially.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "refines": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "roots": {
+              "description": "Requirement types that legitimately have no parent.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z-]*$"
+              }
+            },
+            "required_for_types": {
+              "description": "Types that MUST declare at least one REFINES parent. Ships empty: enabling it before the corpus is annotated hard-gates every requirement at once. Existence, self-reference and cycle checks run regardless.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z-]*$"
+              }
+            }
+          }
         }
       }
     },
     "commands": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["validate_corpus", "export_matrix", "check_uniqueness", "check_glossary", "check_nfr_fields", "check_traceability"],
+      "required": [
+        "validate_corpus",
+        "export_matrix",
+        "check_uniqueness",
+        "check_glossary",
+        "check_nfr_fields",
+        "check_traceability"
+      ],
       "properties": {
-        "validate_corpus": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "export_matrix": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "check_uniqueness": { "$ref": "#/$defs/stringOrPlaceholder" },
-        "check_glossary": { "const": "scripts/check-glossary.sh" },
-        "check_nfr_fields": { "const": "scripts/check-nfr-fields.sh" },
-        "check_traceability": { "const": "scripts/check-traceability.sh" }
+        "validate_corpus": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "export_matrix": {
+          "$ref": "#/$defs/stringOrPlaceholder"
+        },
+        "check_uniqueness": {
+          "description": "Framework-fixed from 3.0.0. A placeholder is still accepted for one minor so a product can upgrade before rewiring; it points at nothing real, and on_duplicate_uid is unenforced until it is set.",
+          "oneOf": [
+            {
+              "const": "scripts/check-uid-uniqueness.sh"
+            },
+            {
+              "const": "<PLACEHOLDER>"
+            }
+          ]
+        },
+        "check_glossary": {
+          "const": "scripts/check-glossary.sh"
+        },
+        "check_nfr_fields": {
+          "const": "scripts/check-nfr-fields.sh"
+        },
+        "check_traceability": {
+          "const": "scripts/check-traceability.sh"
+        }
       }
     },
     "nfr_fields": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required_for_types", "fields"],
+      "required": [
+        "required_for_types",
+        "fields"
+      ],
       "properties": {
         "required_for_types": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "pattern": "^NFR-[A-Z]+$" }
+          "items": {
+            "type": "string",
+            "pattern": "^NFR-[A-Z]+$"
+          }
         },
         "fields": {
           "type": "array",
           "minItems": 3,
-          "items": { "enum": ["METRIC", "THRESHOLD", "MEASUREMENT_METHOD"] },
+          "items": {
+            "enum": [
+              "METRIC",
+              "THRESHOLD",
+              "MEASUREMENT_METHOD"
+            ]
+          },
           "uniqueItems": true
         }
       }
@@ -121,13 +286,29 @@
     "gate": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["on_orphan_marker", "on_missing_marker", "on_duplicate_uid", "on_missing_nfr_field", "on_undefined_glossary_term"],
+      "required": [
+        "on_orphan_marker",
+        "on_missing_marker",
+        "on_duplicate_uid",
+        "on_missing_nfr_field",
+        "on_undefined_glossary_term"
+      ],
       "properties": {
-        "on_orphan_marker": { "const": "hard-gate" },
-        "on_missing_marker": { "const": "hard-gate" },
-        "on_duplicate_uid": { "const": "hard-gate" },
-        "on_missing_nfr_field": { "const": "hard-gate" },
-        "on_undefined_glossary_term": { "const": "hard-gate" }
+        "on_orphan_marker": {
+          "const": "hard-gate"
+        },
+        "on_missing_marker": {
+          "const": "hard-gate"
+        },
+        "on_duplicate_uid": {
+          "const": "hard-gate"
+        },
+        "on_missing_nfr_field": {
+          "const": "hard-gate"
+        },
+        "on_undefined_glossary_term": {
+          "const": "hard-gate"
+        }
       }
     }
   },
